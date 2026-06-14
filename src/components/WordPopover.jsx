@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useLayoutEffect } from 'react';
 import { X, ExternalLink } from 'lucide-react';
 import { lookupWord, sefariaUrl } from '../lib/sefaria.js';
+import { transliterate } from '../lib/transliterate.js';
 
 // A dismissible lexicon popover anchored to a tapped Hebrew or Aramaic word.
 // It calls lookupWord and shows what Sefaria's dictionaries carry, verbatim:
@@ -136,6 +137,14 @@ export default function WordPopover({ word, anchor, onClose }) {
   const headwordForLink =
     state.result && state.result.word ? state.result.word : word;
 
+  // How to say the word: the rule-based transliteration of the tapped word. This
+  // is the sounding-out help a partner gives first, before the meaning. It shows
+  // only when it produces something other than the bare Hebrew (an unpointed or
+  // punctuation-only token yields nothing useful, and is left out rather than
+  // shown empty).
+  const say = transliterate(word);
+  const hasSay = Boolean(say) && say !== word;
+
   const card = (
     <div
       ref={cardRef}
@@ -162,6 +171,15 @@ export default function WordPopover({ word, anchor, onClose }) {
           <X size={18} />
         </button>
       </div>
+
+      {hasSay && (
+        <p style={pronounceLine}>
+          <span style={{ color: 'var(--muted)' }}>Say it: </span>
+          <span dir="ltr" style={{ color: 'var(--text)' }}>
+            {say}
+          </span>
+        </p>
+      )}
 
       {state.status === 'loading' && (
         <p style={mutedLine}>Looking this word up in Sefaria&rsquo;s dictionaries. One moment.</p>
@@ -332,6 +350,14 @@ const chooseLine = {
 const mutedLine = {
   color: 'var(--muted)',
   margin: 0,
+};
+
+const pronounceLine = {
+  fontFamily: 'var(--font-body)',
+  fontSize: '1.05rem',
+  margin: '0 0 var(--space-sm)',
+  paddingBottom: 'var(--space-sm)',
+  borderBottom: '1px solid var(--border)',
 };
 
 const sefariaLink = {

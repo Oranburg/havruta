@@ -8,7 +8,6 @@ import {
   X,
   Lock,
   MessageSquare,
-  ArrowDown,
   ExternalLink,
 } from 'lucide-react';
 import {
@@ -19,7 +18,9 @@ import {
 } from '../lib/sefaria.js';
 import { readProviderSettings } from '../lib/partner.js';
 import { transliterate } from '../lib/transliterate.js';
+import { detectOpener } from '../lib/openers.js';
 import Havruta from '../components/Havruta.jsx';
+import LineHavruta from '../components/LineHavruta.jsx';
 import Commentaries from '../components/Commentaries.jsx';
 import Connections from '../components/Connections.jsx';
 import ScrollProgress from '../components/ScrollProgress.jsx';
@@ -293,6 +294,7 @@ export default function Today() {
             enSize={enSize}
             showTranslit={showTranslit}
             onWordTap={openWord}
+            daf={daf}
           />
           <Amud
             label="ב"
@@ -303,6 +305,7 @@ export default function Today() {
             enSize={enSize}
             showTranslit={showTranslit}
             onWordTap={openWord}
+            daf={daf}
           />
         </>
       )}
@@ -386,16 +389,8 @@ function hasSavedKey() {
   }
 }
 
-function scrollToReading() {
-  const el = document.getElementById('reading');
-  if (el) {
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    el.focus({ preventScroll: true });
-  }
-}
-
 // Makes the study partner obvious from the first look. With no key saved it
-// invites the one setup step; with a key it points the reader to write first.
+// invites the one setup step; with a key it points the reader to take up a line.
 function PartnerIntro({ submitted }) {
   const [keyed] = useState(hasSavedKey);
 
@@ -439,12 +434,17 @@ function PartnerIntro({ submitted }) {
   return (
     <div className="card" style={{ marginBottom: 'var(--space-lg)' }}>
       <p style={{ margin: '0 0 var(--space-sm)' }}>
-        Read the page, then write your own reading. Your havruta challenges what
-        you wrote; it does not hand you the answer.
+        Read a line, then take it up. Under any line below, open{' '}
+        <strong>Discuss this line</strong>: say in a sentence what the line is
+        doing, and your havruta challenges that reading using the line&rsquo;s
+        own words. The places where a new voice or an objection enters are
+        marked as the natural places to stop. Tap any Hebrew word to hear how to
+        say it and what it means.
       </p>
-      <button type="button" className="pill-button" onClick={scrollToReading}>
-        <ArrowDown size={18} /> Write my reading
-      </button>
+      <p style={{ margin: 0, color: 'var(--muted)', fontSize: '0.9rem' }}>
+        When you want to pull the page together, a reading of the whole page
+        waits at the end.
+      </p>
     </div>
   );
 }
@@ -913,13 +913,13 @@ function Amud({
   enSize,
   showTranslit,
   onWordTap,
+  daf,
 }) {
   const count = Math.max(amud.he.length, amud.en.length);
   const segments = Array.from({ length: count }, (_, i) => i);
 
   // Sefaria addresses each segment of an amud by a one-based index appended to
   // the amud ref: "Chullin 44a" becomes "Chullin 44a:1" for the first segment.
-  // The compare control loads that exact segment, so it needs this ref.
   const amudRef = amud.ref || '';
 
   return (
@@ -940,46 +940,160 @@ function Amud({
         {segments.map((i) => {
           const he = amud.he[i] || '';
           const en = amud.en[i] || '';
-          const segmentRef = amudRef ? `${amudRef}:${i + 1}` : '';
+          // The line before and the line after, given to the partner as context
+          // so it can read this line in its place without being handed the whole
+          // daf. Labels are one-based, matching the segment numbering.
+          const neighbors = {
+            prev:
+              i > 0
+                ? {
+                    label: `${amudName} ${i}`,
+                    he: amud.he[i - 1] || '',
+                    en: amud.en[i - 1] || '',
+                  }
+                : null,
+            next:
+              i < count - 1
+                ? {
+                    label: `${amudName} ${i + 2}`,
+                    he: amud.he[i + 1] || '',
+                    en: amud.en[i + 1] || '',
+                  }
+                : null,
+          };
           return (
-            <li
+            <Segment
               key={i}
-              style={{
-                padding: 'var(--space-md) 0',
-                borderBottom: '1px solid var(--border)',
-              }}
-            >
-              {(view === 'both' || view === 'hebrew') && he && (
-                <TappableHebrew html={he} fontSize={heSize} onWordTap={onWordTap} />
-              )}
-              {(view === 'both' || view === 'hebrew') && he && showTranslit && (
-                <TranslitLine he={he} heSize={heSize} />
-              )}
-              {(view === 'both' || view === 'english') && en && (
-                <p
-                  style={{
-                    fontFamily: 'var(--font-accent)',
-                    fontSize: `${enSize}px`,
-                    lineHeight: 1.7,
-                    margin: view === 'both' ? 'var(--space-sm) 0 0' : 0,
-                    color: 'var(--text)',
-                  }}
-                >
-                  {en}
-                </p>
-              )}
-              {(view === 'both' || view === 'english') && en && segmentRef && (
-                <TranslationCompare
-                  segmentRef={segmentRef}
-                  defaultEn={en}
-                  enSize={enSize}
-                />
-              )}
-            </li>
+              index={i}
+              amudRef={amudRef}
+              amudName={amudName}
+              he={he}
+              en={en}
+              view={view}
+              heSize={heSize}
+              enSize={enSize}
+              showTranslit={showTranslit}
+              onWordTap={onWordTap}
+              daf={daf}
+              neighbors={neighbors}
+            />
           );
         })}
       </ol>
     </section>
+  );
+}
+
+// One line of the daf as an interactive unit. It renders the Hebrew (tappable
+// for pronunciation and meaning), the optional transliteration, the English, and
+// the compare-translations control, then a quiet invitation to take the line up.
+// Taking it up opens the per-line partner inline. The invitation reads stronger
+// at the lines where a new voice or an objection enters, the natural places to
+// stop, but a stop is never forced: every line can be taken up and none must be.
+// When a line is taken up, its transliteration shows even if the page-wide
+// transliteration is off, because that is the moment the reader wants to sound
+// it out.
+function Segment({
+  index,
+  amudRef,
+  amudName,
+  he,
+  en,
+  view,
+  heSize,
+  enSize,
+  showTranslit,
+  onWordTap,
+  daf,
+  neighbors,
+}) {
+  const [open, setOpen] = useState(false);
+
+  if (!he && !en) return null;
+
+  const segmentRef = amudRef ? `${amudRef}:${index + 1}` : '';
+  const segmentLabel = `${amudName} ${index + 1}`;
+  const showHebrew = view === 'both' || view === 'hebrew';
+  const showEnglish = view === 'both' || view === 'english';
+  const opener = he ? detectOpener(he) : null;
+
+  return (
+    <li
+      style={{
+        padding: 'var(--space-md) 0',
+        borderBottom: '1px solid var(--border)',
+      }}
+    >
+      {showHebrew && he && (
+        <TappableHebrew html={he} fontSize={heSize} onWordTap={onWordTap} />
+      )}
+      {showHebrew && he && (showTranslit || open) && (
+        <TranslitLine he={he} heSize={heSize} />
+      )}
+      {showEnglish && en && (
+        <p
+          style={{
+            fontFamily: 'var(--font-accent)',
+            fontSize: `${enSize}px`,
+            lineHeight: 1.7,
+            margin: view === 'both' ? 'var(--space-sm) 0 0' : 0,
+            color: 'var(--text)',
+          }}
+        >
+          {en}
+        </p>
+      )}
+      {showEnglish && en && segmentRef && (
+        <TranslationCompare
+          segmentRef={segmentRef}
+          defaultEn={en}
+          enSize={enSize}
+        />
+      )}
+
+      <div style={{ marginTop: 'var(--space-sm)' }}>
+        {!open && opener && (
+          <p
+            style={{
+              margin: '0 0 var(--space-xs)',
+              color: 'var(--accent-2)',
+              fontSize: '0.85rem',
+            }}
+          >
+            {opener.cue}
+          </p>
+        )}
+        <button
+          type="button"
+          className={open ? 'pill-button pill-button--active' : 'pill-button'}
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-controls={open ? `line-${segmentRef}` : undefined}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+        >
+          <MessageSquare size={16} aria-hidden="true" />
+          {open
+            ? 'Close this line'
+            : opener
+            ? 'Take up this line'
+            : 'Discuss this line'}
+        </button>
+      </div>
+
+      {open && (
+        <div id={`line-${segmentRef}`}>
+          <LineHavruta
+            daf={daf}
+            segmentRef={segmentRef}
+            segmentLabel={segmentLabel}
+            he={he}
+            en={en}
+            neighbors={neighbors}
+            onClose={() => setOpen(false)}
+          />
+        </div>
+      )}
+    </li>
   );
 }
 
@@ -1013,12 +1127,14 @@ function TranslitLine({ he, heSize }) {
 function ReadingGate({ reading, setReading, submitted, onSubmit, daf, text }) {
   return (
     <section style={{ marginTop: 'var(--space-2xl)' }}>
-      <h2>Your reading comes first</h2>
+      <h2>Step back: your reading of the whole page</h2>
       <p style={{ color: 'var(--muted)' }}>
-        Read the page and write your own reading, question, or attempt to
-        paraphrase it before the partner says anything. Acting first is the
-        point. The partner challenges what you wrote; it does not hand you an
-        answer.
+        You take up lines one at a time as you read above. When you want to pull
+        the page together, write your reading of the whole sugya here and your
+        havruta challenges the whole of it. This is the closing step, not the way
+        in: the line-by-line work above is the heart of it. As ever, you write
+        first, and the partner challenges what you wrote rather than handing you
+        an answer.
       </p>
 
       <label htmlFor="reading" className="sr-only">
@@ -1028,7 +1144,7 @@ function ReadingGate({ reading, setReading, submitted, onSubmit, daf, text }) {
         id="reading"
         value={reading}
         onChange={(e) => setReading(e.target.value)}
-        placeholder="What do you make of this page? Write your reading, a question it raises, or your best attempt to say what it means."
+        placeholder="Pull the page together: what is the sugya as a whole doing? Write your reading of the whole of it."
         rows={6}
         readOnly={submitted}
         style={{
@@ -1067,9 +1183,9 @@ function ReadingGate({ reading, setReading, submitted, onSubmit, daf, text }) {
             Your havruta
           </h3>
           <p style={{ margin: 0, color: 'var(--muted)' }}>
-            This panel stays locked until you write your own reading above and
-            submit it. The partner becomes reachable only after you have
-            committed a reading of your own.
+            This whole-page partner stays locked until you write your reading of
+            the page above and submit it. You can also take up single lines
+            higher on the page without coming down here.
           </p>
         </div>
       )}

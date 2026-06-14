@@ -59,8 +59,9 @@ export default function Archive() {
     if (!q) return sessions;
     return sessions.filter((s) => {
       const daf = (s.dafDisplay || s.dafRef || '').toLowerCase();
+      const line = (s.segmentLabel || '').toLowerCase();
       const date = formatDate(s.savedAt).toLowerCase();
-      return daf.includes(q) || date.includes(q);
+      return daf.includes(q) || line.includes(q) || date.includes(q);
     });
   }, [sessions, query]);
 
@@ -84,6 +85,11 @@ export default function Archive() {
         </button>
 
         <h1>{open.dafDisplay || open.dafRef}</h1>
+        {open.segmentLabel && (
+          <p style={{ color: 'var(--accent-2)', margin: '0 0 var(--space-xs)' }}>
+            On {open.segmentLabel}
+          </p>
+        )}
         <p style={{ color: 'var(--muted)', marginTop: 0 }}>
           {formatDate(open.savedAt)}
         </p>
@@ -209,6 +215,17 @@ export default function Archive() {
                   >
                     {s.dafDisplay || s.dafRef}
                   </span>
+                  {s.segmentLabel && (
+                    <span
+                      style={{
+                        display: 'block',
+                        color: 'var(--accent-2)',
+                        fontSize: '0.85rem',
+                      }}
+                    >
+                      On {s.segmentLabel}
+                    </span>
+                  )}
                   <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
                     {formatDate(s.savedAt)}
                   </span>

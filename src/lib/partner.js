@@ -218,3 +218,58 @@ export function buildFirstUserMessage(dafRef, text, reading) {
     reading.trim(),
   ].join('\n');
 }
+
+// Build the one-line block for the per-line message: a labeled line of supplied
+// text. Used for the line in focus and for its neighbors.
+function lineBlock(label, line) {
+  if (!line) return '';
+  const he = stripHtml(line.he || '');
+  const en = (line.en || '').trim();
+  const out = [`[${label}]`];
+  if (he) out.push(`Hebrew/Aramaic: ${he}`);
+  if (en) out.push(`English: ${en}`);
+  return out.join('\n');
+}
+
+// Build the first user message for studying one line. The partner is handed the
+// single line in focus, with the line before and the line after for context, and
+// the reader's reading of that one line. Only these lines are quotable. This
+// keeps the partner on the line the reader is working, and keeps each per-line
+// exchange small instead of resending the whole daf.
+//
+// segment: { label, he, en } for the line in focus.
+// neighbors: { prev: {label, he, en} | null, next: {label, he, en} | null }.
+// reading: the reader's committed sentence about this line.
+export function buildSegmentFirstUserMessage(dafRef, segment, neighbors, reading) {
+  const prev = neighbors && neighbors.prev;
+  const next = neighbors && neighbors.next;
+  const parts = [
+    `We are studying ${dafRef} together, one line at a time. Right now we are on a single line. The text below, and only this text, is what you may quote: the line we are on, plus the line before and the line after for context. The Hebrew and Aramaic are in Hebrew characters; the English is the William Davidson translation.`,
+    '',
+  ];
+
+  if (prev) {
+    parts.push('----- THE LINE BEFORE (context only, do not make this the subject) -----');
+    parts.push(lineBlock(prev.label, prev));
+    parts.push('');
+  }
+
+  parts.push('----- THE LINE WE ARE ON -----');
+  parts.push(lineBlock(segment.label, segment));
+  parts.push('');
+
+  if (next) {
+    parts.push('----- THE LINE AFTER (context only, do not make this the subject) -----');
+    parts.push(lineBlock(next.label, next));
+    parts.push('');
+  }
+
+  parts.push('----- MY READING OF THE LINE WE ARE ON -----');
+  parts.push(
+    'Here is what I think this line is doing. Challenge it: press on the weakest word, and quote this line’s own words when you do. We are moving a line at a time, so keep it short and pointed, one challenge at a time.'
+  );
+  parts.push('');
+  parts.push(reading.trim());
+
+  return parts.join('\n');
+}

@@ -175,6 +175,106 @@ if (appSource) {
 }
 
 // ---------------------------------------------------------------------------
+// 5. Opener detection (src/lib/openers.js).
+// ---------------------------------------------------------------------------
+console.log('\n--- 5. Opener detection ---');
+
+let detectOpener;
+try {
+  const mod = await import('../src/lib/openers.js');
+  detectOpener = mod.detectOpener;
+  if (typeof detectOpener !== 'function') throw new Error('detectOpener is not a function');
+  pass('openers module imports');
+} catch (err) {
+  fail('openers module imports', err.message);
+  detectOpener = null;
+}
+
+if (detectOpener) {
+  const openerCases = [
+    { input: 'מֵתִיב רַב יִרְמְיָה', expectCue: true, label: 'objection opener (מתיב) detected' },
+    { input: 'אָמַר רַב יְהוּדָה אָמַר רַב', expectCue: true, label: 'new-voice opener (אמר) detected' },
+    { input: 'תָּנוּ רַבָּנַן', expectCue: true, label: 'taught-source opener (תנו רבנן) detected' },
+    { input: 'וּבְגוּלְגּוֹלֶת שֶׁיֵּשׁ בָּהּ נֶקֶב', expectCue: false, label: 'plain line yields no opener' },
+  ];
+  for (const { input, expectCue, label } of openerCases) {
+    const got = detectOpener(input);
+    const hasCue = Boolean(got && got.cue);
+    if (hasCue === expectCue) {
+      pass(label);
+    } else {
+      fail(label, `got ${JSON.stringify(got)}, expected cue=${expectCue}`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 6. Per-line partner message (src/lib/partner.js).
+// ---------------------------------------------------------------------------
+console.log('\n--- 6. Per-line partner message ---');
+
+let buildSegmentFirstUserMessage;
+try {
+  const mod = await import('../src/lib/partner.js');
+  buildSegmentFirstUserMessage = mod.buildSegmentFirstUserMessage;
+  if (typeof buildSegmentFirstUserMessage !== 'function') {
+    throw new Error('buildSegmentFirstUserMessage is not a function');
+  }
+  pass('buildSegmentFirstUserMessage exported');
+} catch (err) {
+  fail('buildSegmentFirstUserMessage exported', err.message);
+  buildSegmentFirstUserMessage = null;
+}
+
+if (buildSegmentFirstUserMessage) {
+  const msg = buildSegmentFirstUserMessage(
+    'Chullin 45',
+    { label: 'Amud a 2', he: 'אָמַר רַב', en: 'Rav said' },
+    { prev: null, next: null },
+    'This line introduces a ruling of Rav.'
+  );
+  const checks = [
+    { ok: msg.includes('THE LINE WE ARE ON'), label: 'message marks the line in focus' },
+    { ok: msg.includes('Amud a 2'), label: 'message carries the line label' },
+    { ok: msg.includes('This line introduces a ruling of Rav.'), label: 'message carries the reader reading' },
+    { ok: msg.includes('Chullin 45'), label: 'message names the daf' },
+  ];
+  for (const { ok, label } of checks) {
+    if (ok) pass(label);
+    else fail(label);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 7. Line-level engagement wiring.
+// ---------------------------------------------------------------------------
+console.log('\n--- 7. Line engagement wiring ---');
+
+const wiringFiles = [
+  'src/lib/usePartnerConversation.js',
+  'src/components/PartnerTurns.jsx',
+  'src/components/LineHavruta.jsx',
+  'src/lib/openers.js',
+];
+for (const f of wiringFiles) {
+  if (existsSync(resolve(root, f))) {
+    pass(`${f} exists`);
+  } else {
+    fail(`${f} exists`, 'not found');
+  }
+}
+
+try {
+  const todaySrc = readFileSync(resolve(root, 'src/pages/Today.jsx'), 'utf8');
+  if (todaySrc.includes('LineHavruta')) pass('Today.jsx wires LineHavruta');
+  else fail('Today.jsx wires LineHavruta', 'LineHavruta not referenced');
+  if (todaySrc.includes("openers.js")) pass('Today.jsx wires opener detection');
+  else fail('Today.jsx wires opener detection', 'openers.js not imported');
+} catch (err) {
+  fail('Today.jsx readable for wiring check', err.message);
+}
+
+// ---------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------
 console.log(`\n${passes + failures} checks: ${passes} passed, ${failures} failed`);

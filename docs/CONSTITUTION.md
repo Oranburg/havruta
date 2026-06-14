@@ -24,7 +24,7 @@ Chapter 13 names five principles that the board, the judge, and the classroom ap
 
 "In every havruta application, the human produces judgment before the AI engages." The board drafts strategy, the judge drafts the sentence, the student writes the revision, and only then does the machine respond. "Acting first forces judgment. Receiving first atrophies it."
 
-In the app this is a hard gate. You read the daf and write your own reading, question, or paraphrase attempt before the partner is reachable. The partner's panel stays locked until you submit something of your own. There is no button that reveals an answer before you have committed a reading.
+In the app this is a hard gate, and it operates line by line. The page is built so you can take up any single line: under that line you write one sentence saying what it is doing, and only then does the partner challenge it, using that line's own words. The partner stays silent on a line until you have committed a reading of it. A whole-page reading at the end works the same way: you give your reading of the sugya before the page-level partner answers. The line is the primary unit, because a real havruta argues at the first line that resists, not after the whole page is read. There is no button that reveals an answer before you have committed a reading.
 
 ### 2. The partner challenges rather than confirms
 

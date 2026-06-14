@@ -46,11 +46,23 @@ function makeId() {
 // Create a new session record and store it. The exchange is the full message
 // array exchanged with the partner; the reading is the reader's first reading.
 // Returns the stored record (with its id) so the caller can keep updating it.
-export function createSession({ dafRef, dafDisplay, reading, messages }) {
+export function createSession({
+  dafRef,
+  dafDisplay,
+  reading,
+  messages,
+  segmentRef,
+  segmentLabel,
+}) {
   const record = {
     id: makeId(),
     dafRef: dafRef || '',
     dafDisplay: dafDisplay || dafRef || '',
+    // When the session is about one line rather than the whole page, these name
+    // it: the Sefaria segment ref and a human label like "Amud a 3". Empty for a
+    // whole-page session.
+    segmentRef: segmentRef || '',
+    segmentLabel: segmentLabel || '',
     savedAt: Date.now(),
     // The reader's own readings, in order. The first reading opens the session;
     // any later readings the reader writes are appended here too.
