@@ -56,13 +56,15 @@ function flattenSegments(value) {
 // Pass an optional Date to look up a specific day.
 // Returns { ref, displayEn, displayHe }.
 export async function getTodaysDaf(date) {
-  let url = `${API}/calendars`;
-  if (date instanceof Date && !Number.isNaN(date.getTime())) {
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    url += `?year=${year}&month=${month}&day=${day}`;
-  }
+  // Default to the device's local date, so the daf is correct for the user's own
+  // day rather than the Sefaria server's timezone. A caller may pass a Date to
+  // ask for a specific day, for example the next day's daf after nightfall.
+  const d =
+    date instanceof Date && !Number.isNaN(date.getTime()) ? date : new Date();
+  const year = d.getFullYear();
+  const month = d.getMonth() + 1;
+  const day = d.getDate();
+  const url = `${API}/calendars?year=${year}&month=${month}&day=${day}`;
   const data = await getJson(url);
   const items = Array.isArray(data.calendar_items) ? data.calendar_items : [];
   const daf = items.find((item) => item && item.title && item.title.en === 'Daf Yomi');
