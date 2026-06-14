@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import mdx from '@mdx-js/rollup';
 import { VitePWA } from 'vite-plugin-pwa';
 
 // Deployed on GitHub Pages under the /havruta/ subpath. Uses HashRouter, so deep links
@@ -7,7 +8,11 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig({
   base: '/havruta/',
   plugins: [
-    react(),
+    // MDX runs before the React plugin (enforce: 'pre') so the .mdx that backs
+    // the /learn page compiles with the React automatic runtime, the same way
+    // .jsx files do. The /learn page is authored in MDX.
+    { enforce: 'pre', ...mdx({ jsxImportSource: 'react' }) },
+    react({ include: /\.(jsx|js|mdx|md|tsx|ts)$/ }),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],

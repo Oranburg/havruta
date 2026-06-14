@@ -51,6 +51,102 @@
   letter-spacing: 0.02em;
 }
 
+/* The left cluster of the header: hamburger button then brand. */
+.app-header__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* The dim layer behind the open navigation drawer. A tap on it closes the
+   drawer. It sits above everything else so the drawer reads as modal. */
+.nav-drawer__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+/* The slide-in panel. It anchors to the left edge and grows downward, so adding
+   destinations only makes the list taller. */
+.nav-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 61;
+  width: min(82vw, 320px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  box-shadow: 2px 0 16px rgba(0, 0, 0, 0.35);
+  padding-top: env(safe-area-inset-top, 0px);
+  overflow-y: auto;
+}
+
+.nav-drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-drawer__title {
+  font-family: var(--font-headline);
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+.nav-drawer__list {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-sm);
+  gap: 2px;
+}
+
+.nav-drawer__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  min-height: 52px;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  text-decoration: none;
+}
+
+.nav-drawer__item:hover {
+  background: var(--bg-soft);
+  text-decoration: none;
+}
+
+.nav-drawer__item.is-active {
+  background: var(--bg-soft);
+  color: var(--accent);
+}
+
+/* The slide-in animation, suppressed under prefers-reduced-motion by the global
+   rule at the foot of tokens.css. */
+@keyframes nav-drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.nav-drawer {
+  animation: nav-drawer-in 0.18s ease-out;
+}
+
 .app-main {
   flex: 1 1 auto;
   width: 100%;
@@ -173,4 +269,92 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: var(--space-lg);
+}
+
+/* A Mermaid diagram on the page, framed like a card so it reads as one figure. */
+.mermaid-figure {
+  margin: var(--space-xl) 0;
+  padding: var(--space-lg);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.mermaid-figure__diagram {
+  display: flex;
+  justify-content: center;
+}
+
+.mermaid-figure__diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.mermaid-figure__caption {
+  margin-top: var(--space-md);
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* Artwork slots on the How the daf is learned page. */
+.learn-image {
+  margin: var(--space-xl) 0;
+}
+
+.learn-image__img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.learn-image__placeholder {
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  background: var(--bg-soft);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+}
+
+.learn-image__caption {
+  margin-top: var(--space-sm);
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* The MDX body of the How the daf is learned page. Reading prose runs in the
+   scholarly serif at a comfortable size. */
+.learn-prose {
+  font-family: var(--font-accent);
+  font-size: 1.15rem;
+  line-height: 1.7;
+}
+
+.learn-prose blockquote {
+  margin: var(--space-lg) 0;
+  padding: var(--space-md) var(--space-lg);
+  border-left: 3px solid var(--accent-red);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+}
+
+.learn-prose blockquote p {
+  margin: 0 0 var(--space-sm);
+}
+
+.learn-prose blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* A long Hebrew or Aramaic quotation inside the prose, right to left. */
+.learn-prose .hebrew-block {
+  font-family: var(--font-hebrew);
+  direction: rtl;
+  text-align: right;
+  font-size: 1.5rem;
+  line-height: 1.9;
 }

@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { HashRouter, Routes, Route, NavLink, Link } from 'react-router-dom';
 import {
   Sun,
   Moon,
+  Menu,
   BookOpen,
   Library,
   Archive as ArchiveIcon,
@@ -13,8 +14,10 @@ import Today from './pages/Today.jsx';
 import Shas from './pages/Shas.jsx';
 import Archive from './pages/Archive.jsx';
 import Settings from './pages/Settings.jsx';
+import Learn from './pages/Learn.jsx';
 import NotFound from './pages/NotFound.jsx';
 import InstallPrompt from './components/InstallPrompt.jsx';
+import NavDrawer from './components/NavDrawer.jsx';
 
 const THEME_KEY = 'havruta-theme';
 
@@ -26,7 +29,7 @@ function readTheme() {
   return 'dark';
 }
 
-function Header() {
+function Header({ onOpenMenu, menuButtonRef }) {
   const [theme, setTheme] = useState(readTheme);
 
   // Keep React state in sync with the attribute set by the pre-paint script.
@@ -43,9 +46,20 @@ function Header() {
 
   return (
     <header className="app-header">
-      <Link to="/" className="app-header__brand">
-        Havruta
-      </Link>
+      <div className="app-header__left">
+        <button
+          type="button"
+          ref={menuButtonRef}
+          className="icon-button"
+          onClick={onOpenMenu}
+          aria-label="Open menu"
+        >
+          <Menu size={22} />
+        </button>
+        <Link to="/" className="app-header__brand">
+          Havruta
+        </Link>
+      </div>
       <button
         type="button"
         className="icon-button"
@@ -97,16 +111,28 @@ function Footer() {
 }
 
 export default function App() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuButtonRef = useRef(null);
+
   return (
     <HashRouter>
       <div className="app-shell">
-        <Header />
+        <Header
+          onOpenMenu={() => setMenuOpen(true)}
+          menuButtonRef={menuButtonRef}
+        />
+        <NavDrawer
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          returnFocusRef={menuButtonRef}
+        />
         <main className="app-main">
           <Routes>
             <Route path="/" element={<Today />} />
             <Route path="/shas" element={<Shas />} />
             <Route path="/archive" element={<Archive />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/learn" element={<Learn />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Footer />

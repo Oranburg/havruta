@@ -216,26 +216,28 @@ export default function Today() {
     );
   }
 
+  const hasImage = images.length > 0;
+
   return (
     <section>
       <ScrollProgress />
 
-      <Header daf={daf} />
+      {/* The page image leads. Above it there is only a minimal title bar with
+          the daf reference and an open-on-Sefaria link, because the visual page
+          is the first thing the reader should see. Everything that the reader
+          acts on (reading, partner, transcribed text, controls, commentaries,
+          connections, navigation) sits below the image. */}
+      <TitleBar daf={daf} />
 
-      {daf && (
-        <p style={{ margin: '0 0 var(--space-lg)' }}>
-          <a
-            href={sefariaUrl(daf.ref)}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-            }}
-          >
-            Open this daf on Sefaria <ExternalLink size={16} aria-hidden="true" />
-          </a>
+      {hasImage ? (
+        <PageImage image={images[0]} onOpen={() => setLightboxOpen(true)} />
+      ) : (
+        <p
+          className="card"
+          style={{ margin: '0 0 var(--space-lg)', color: 'var(--muted)' }}
+        >
+          No page image is available for this daf, so the transcribed text leads
+          below.
         </p>
       )}
 
@@ -251,10 +253,6 @@ export default function Today() {
         enSize={enSize}
         setEnSize={setEnSize}
       />
-
-      {images.length > 0 && (
-        <PageImage image={images[0]} onOpen={() => setLightboxOpen(true)} />
-      )}
 
       {text && (
         <>
@@ -312,18 +310,40 @@ export default function Today() {
   );
 }
 
-function Header({ daf }) {
+// The minimal title bar that sits above the page image. It carries the daf
+// reference in English and, when Sefaria supplies it, in Hebrew, plus the quiet
+// open-on-Sefaria link. Nothing else stands above the image.
+function TitleBar({ daf }) {
+  if (!daf) return null;
   return (
     <header style={{ marginBottom: 'var(--space-md)' }}>
       <h1 style={{ marginBottom: 'var(--space-xs)' }}>{daf.displayEn}</h1>
       {daf.displayHe && (
         <p
           className="hebrew"
-          style={{ fontSize: '1.4rem', color: 'var(--accent-2)', margin: 0 }}
+          style={{
+            fontSize: '1.4rem',
+            color: 'var(--accent-2)',
+            margin: '0 0 var(--space-sm)',
+          }}
         >
           {daf.displayHe}
         </p>
       )}
+      <p style={{ margin: 0 }}>
+        <a
+          href={sefariaUrl(daf.ref)}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+          }}
+        >
+          Open this daf on Sefaria <ExternalLink size={16} aria-hidden="true" />
+        </a>
+      </p>
     </header>
   );
 }
