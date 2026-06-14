@@ -1,13 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Send, Square, Lock } from 'lucide-react';
-import { streamHavruta } from '../lib/anthropic.js';
+import { streamPartner } from '../lib/anthropic.js';
 import {
-  KEY_STORAGE,
-  MODEL_STORAGE,
-  LEVEL_STORAGE,
-  DEFAULT_MODEL,
-  DEFAULT_LEVEL,
+  readProviderSettings,
   buildSystemPrompt,
   buildFirstUserMessage,
 } from '../lib/partner.js';
@@ -35,21 +31,6 @@ function renderPartnerText(text) {
   });
 }
 
-// Read the saved key, model, and level from localStorage at call time.
-function readSettings() {
-  let apiKey = '';
-  let model = DEFAULT_MODEL;
-  let level = DEFAULT_LEVEL;
-  try {
-    apiKey = localStorage.getItem(KEY_STORAGE) || '';
-    model = localStorage.getItem(MODEL_STORAGE) || DEFAULT_MODEL;
-    level = localStorage.getItem(LEVEL_STORAGE) || DEFAULT_LEVEL;
-  } catch {
-    // localStorage unavailable; fall back to defaults.
-  }
-  return { apiKey, model, level };
-}
-
 // The partner panel. It is reachable only after the reader submits a reading
 // (the human-acts-first gate lives in Today.jsx, which renders this component
 // only once a reading is submitted). On mount it starts the first exchange.
@@ -69,7 +50,6 @@ export default function Havruta({ daf, text, reading }) {
   const startedRef = useRef(false);
   const streamingTextRef = useRef('');
 
-  const settings = readSettings();
   const dafRef = daf ? daf.ref : '';
   const dafDisplay = daf ? daf.displayEn : dafRef;
 
@@ -78,13 +58,13 @@ export default function Havruta({ daf, text, reading }) {
     if (startedRef.current) return;
     startedRef.current = true;
 
-    const { apiKey, model, level } = readSettings();
-    if (!apiKey) {
+    const settings = readProviderSettings();
+    if (!settings.apiKey) {
       setNoKey(true);
       return;
     }
 
-    const system = buildSystemPrompt(dafRef, level);
+    const system = buildSystemPrompt(dafRef, settings.level);
     const firstUser = buildFirstUserMessage(dafRef, text, reading);
     messagesRef.current = [{ role: 'user', content: firstUser }];
 
@@ -100,14 +80,16 @@ export default function Havruta({ daf, text, reading }) {
 
     // Show the reader's reading as the opening turn, then stream the challenge.
     setTurns([{ role: 'reader', text: reading.trim() }]);
-    runExchange(system, model, apiKey);
+    runExchange(system, settings);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Run one streamed exchange: append an empty partner turn, then fill it as
   // text arrives. On completion, commit the partner turn to the message history
-  // and the saved record.
-  function runExchange(system, model, apiKey) {
+  // and the saved record. The settings object names the provider, base URL,
+  // key, and model; the system prompt and the human-acts-first flow are
+  // identical across every provider.
+  function runExchange(system, settings) {
     setStreaming(true);
     setPartnerError(null);
     streamingTextRef.current = '';
@@ -118,9 +100,11 @@ export default function Havruta({ daf, text, reading }) {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    streamHavruta({
-      apiKey,
-      model,
+    streamPartner({
+      provider: settings.provider,
+      baseUrl: settings.baseUrl,
+      apiKey: settings.apiKey,
+      model: settings.model,
       system,
       messages: messagesRef.current,
       signal: controller.signal,
@@ -187,8 +171,8 @@ export default function Havruta({ daf, text, reading }) {
     const trimmed = reply.trim();
     if (trimmed.length === 0 || streaming) return;
 
-    const { apiKey, model, level } = readSettings();
-    if (!apiKey) {
+    const settings = readProviderSettings();
+    if (!settings.apiKey) {
       setNoKey(true);
       return;
     }
@@ -207,8 +191,8 @@ export default function Havruta({ daf, text, reading }) {
     }
     setReply('');
 
-    const system = buildSystemPrompt(dafRef, level);
-    runExchange(system, model, apiKey);
+    const system = buildSystemPrompt(dafRef, settings.level);
+    runExchange(system, settings);
   }
 
   function stop() {
@@ -217,15 +201,17 @@ export default function Havruta({ daf, text, reading }) {
     }
   }
 
-  // No key saved: a calm message with a link to Settings.
+  // No key saved: a calm message with a link to Settings, naming whichever
+  // provider is currently selected.
   if (noKey) {
+    const provider = readProviderSettings().provider;
     return (
       <div className="card" style={{ marginTop: 'var(--space-lg)' }}>
         <h3 style={{ marginTop: 0 }}>Your havruta</h3>
         <p style={{ margin: '0 0 var(--space-md)' }}>
-          The partner runs on Claude and needs your own Anthropic API key. Add a
-          key in Settings, and the partner becomes reachable. Your reading is
-          saved and waiting.
+          The partner runs on {provider.label} and needs your own API key for
+          it. Add a key in Settings, and the partner becomes reachable. Your
+          reading is saved and waiting.
         </p>
         <Link to="/settings" className="pill-button">
           Open Settings

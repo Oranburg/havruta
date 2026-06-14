@@ -4,11 +4,106 @@
 // docs/PARTNER-PROMPT.md. Keep the two in sync. The build fills {{DAF_REF}}
 // with the Sefaria ref and {{LEVEL}} with the calibration setting.
 
+import {
+  PROVIDERS,
+  DEFAULT_PROVIDER_ID,
+  getProvider,
+} from './providers.js';
+
+// The original Anthropic-only storage keys. These remain the source of truth
+// the app migrates from, so a reader who already saved a Claude key and model
+// keeps the partner working with no action.
 export const KEY_STORAGE = 'havruta-anthropic-key';
 export const MODEL_STORAGE = 'havruta-model';
 export const LEVEL_STORAGE = 'havruta-level';
 
+// The chosen provider id, defaulting to Claude.
+export const PROVIDER_STORAGE = 'havruta-provider';
+
+// Per-provider storage keys. The key, model, and (for the custom provider)
+// base URL are stored under the provider id so switching providers does not
+// lose the others' settings.
+export function keyStorageFor(providerId) {
+  return `havruta-key-${providerId}`;
+}
+export function modelStorageFor(providerId) {
+  return `havruta-model-${providerId}`;
+}
+export function baseUrlStorageFor(providerId) {
+  return `havruta-baseurl-${providerId}`;
+}
+
 export const DEFAULT_MODEL = 'claude-sonnet-4-6';
+
+// Move the original Anthropic key and model into the anthropic-provider slots
+// on first load, so an existing Claude setup keeps working with no action. This
+// runs once: it writes the per-provider slots only when they are empty and the
+// old values are present, and never deletes the old keys (other code and older
+// builds may still read them). Safe to call on every startup.
+export function migrateLegacyStorage() {
+  try {
+    const anthropicKeySlot = keyStorageFor('anthropic');
+    const anthropicModelSlot = modelStorageFor('anthropic');
+
+    const legacyKey = localStorage.getItem(KEY_STORAGE);
+    if (legacyKey && !localStorage.getItem(anthropicKeySlot)) {
+      localStorage.setItem(anthropicKeySlot, legacyKey);
+    }
+
+    const legacyModel = localStorage.getItem(MODEL_STORAGE);
+    if (legacyModel && !localStorage.getItem(anthropicModelSlot)) {
+      localStorage.setItem(anthropicModelSlot, legacyModel);
+    }
+  } catch {
+    // localStorage unavailable; nothing to migrate.
+  }
+}
+
+// Read the full active provider setting set: which provider is chosen, its key,
+// its model (defaulting to the provider's default), its base URL (the reader's
+// own for the custom provider, otherwise the provider default), and the
+// calibration level. Runs the legacy migration first so an existing Claude key
+// is in place before anything reads it.
+export function readProviderSettings() {
+  migrateLegacyStorage();
+
+  let providerId = DEFAULT_PROVIDER_ID;
+  let apiKey = '';
+  let baseUrl = '';
+  let level = DEFAULT_LEVEL;
+
+  try {
+    providerId = localStorage.getItem(PROVIDER_STORAGE) || DEFAULT_PROVIDER_ID;
+  } catch {
+    // localStorage unavailable; fall back to the default provider.
+  }
+
+  const provider = getProvider(providerId);
+  providerId = provider.id;
+
+  let model = provider.defaultModel;
+  try {
+    apiKey = localStorage.getItem(keyStorageFor(providerId)) || '';
+    model =
+      localStorage.getItem(modelStorageFor(providerId)) || provider.defaultModel;
+    if (provider.id === 'custom') {
+      baseUrl =
+        localStorage.getItem(baseUrlStorageFor(providerId)) ||
+        provider.defaultBaseUrl;
+    } else {
+      baseUrl = provider.defaultBaseUrl;
+    }
+    level = localStorage.getItem(LEVEL_STORAGE) || DEFAULT_LEVEL;
+  } catch {
+    // localStorage unavailable; fall back to provider defaults.
+  }
+
+  return { provider, providerId, apiKey, model, baseUrl, level };
+}
+
+// Re-export the registry pieces Settings and the panel use, so they can import
+// everything they need from partner.js.
+export { PROVIDERS, DEFAULT_PROVIDER_ID, getProvider };
 
 // The default calibration level, written as the prompt expects to read it.
 export const DEFAULT_LEVEL =
