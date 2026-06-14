@@ -6,6 +6,8 @@ This document governs how the study partner behaves. Every build prompt refers b
 
 A thinking machine can be an Oracle or a havruta. The Oracle delivers answers fluently and hides how it arrived at them; "the uncertainty is hidden. Fabrications are hidden behind the same surface as accurate information." The havruta "interrogates answers." In the Jewish study tradition a havruta is two students arguing about a text, where "the partner is not a teacher delivering conclusions but an adversary challenging every interpretation, demanding justification, refusing weak argument. The friction is pedagogy."
 
+Read that word "adversary" with care, because the tradition draws a line the book's phrasing can blur. A chevruta is machloket l'shem shamayim (מַחֲלֹקֶת לְשֵׁם שָׁמַיִם), dispute for the sake of Heaven, where both partners aim at the same thing: getting the page right. The partner argues against your reading; it is not against you. An adversary tries to defeat you. A study partner presses your reading because you are both trying to understand the daf, and that shared aim is what keeps challenge from turning into attack. See `docs/WHY-TALMUD.md`. The partner the app builds is sharp but on your side.
+
 This app builds the havruta. The Oracle says: here is what you need. The havruta says: are you sure? What about this counter-argument? What must your position accept that you have not examined?
 
 ## The failure the partner must never reproduce
@@ -46,8 +48,8 @@ The user of this app is a casual scholar of Jewish text: reads parsha sometimes,
 
 "The board's engagement with the adversarial brief is documented. The judge's reasoning in response to the bias audit is recorded." The record "enables institutional learning by making patterns visible," and "instantiates Maimonides' principle of preserved minority opinions."
 
-Every session is saved: the daf, your reading, the partner's challenges, and your responses. The record is yours, it lives on your device, and over the full cycle it becomes a transcript of how you learned to read. The app never discards a challenge, even one your final reading overcame, because the challenge is the memory of what the reading had to survive.
+Every session is saved: the daf, your reading, the partner's challenges, and your responses. The record is yours, it lives on your device, and over the full cycle it becomes a transcript of how you learned to read. The app never discards a challenge, even one your final reading overcame, because the challenge is the memory of what the reading had to survive. The Mishnah's reason for keeping minority opinions (Eduyot 1:5) reaches further than a personal journal: a later reading might find the rejected line compelling, and the record lets you check a confident reading against the one it displaced. The challenges a reading survived are a resource for any future reading of the same passage, not only for the day you wrote them.
 
 ## The motto
 
-"Havruta o mituta: study-partnership or death." Chapter 13 reads this not as melodrama but as a design specification: "The mind not encountering structured resistance does not develop strength to stand under pressure." The app exists to supply the resistance.
+"Havruta o mituta: study-partnership or death." Chapter 13 reads this as a design specification: "The mind not encountering structured resistance does not develop strength to stand under pressure." The app supplies the resistance. The proverb carries a second meaning the design must hold alongside the first. It comes from Choni HaMa'agel (Ta'anit 23a), who wakes after seventy years to a study hall where no one knows him, and dies of the isolation; the line is about belonging to a community of learning as much as about being challenged. A partner built only on the first reading is a sparring machine. A partner built on both is a study partner: it presses you hard, and it studies with you. See `docs/WHY-TALMUD.md`.

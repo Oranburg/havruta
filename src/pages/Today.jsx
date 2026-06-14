@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   ChevronLeft,
@@ -13,6 +13,8 @@ import {
 import { getTodaysDaf, getDafText, getDafImages } from '../lib/sefaria.js';
 import { KEY_STORAGE } from '../lib/partner.js';
 import Havruta from '../components/Havruta.jsx';
+import Commentaries from '../components/Commentaries.jsx';
+import Connections from '../components/Connections.jsx';
 
 // Reading views the toggle offers.
 const VIEWS = [
@@ -236,6 +238,13 @@ export default function Today() {
       )}
 
       <DafNav prevDaf={prevDaf} nextDaf={nextDaf} onGo={load} />
+
+      {daf && (
+        <>
+          <Commentaries dafRef={daf.ref} heSize={heSize} enSize={enSize} />
+          <Connections dafRef={daf.ref} heSize={heSize} enSize={enSize} />
+        </>
+      )}
 
       <ReadingGate
         reading={reading}
@@ -483,13 +492,138 @@ function PageImage({ image, onOpen }) {
   );
 }
 
+// Zoom bounds for the page image. The dense Vilna page needs to enlarge well
+// past its fit-to-screen size for a phone to read it.
+const ZOOM_MIN = 1;
+const ZOOM_MAX = 6;
+const ZOOM_DOUBLE_TAP = 2.5;
+
+// Distance between two pointers, for pinch scaling.
+function pinchDistance(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+// The full-screen page-image view. It supports pinch-to-zoom and one-finger pan
+// on touch, double-tap to zoom in and back out, and a mouse-wheel zoom, so the
+// Vilna page reads on a phone. The close control and the edition caption stay
+// in view at every zoom level.
 function Lightbox({ image, onClose }) {
+  const surfaceRef = useRef(null);
+  const [scale, setScale] = useState(1);
+  const [tx, setTx] = useState(0);
+  const [ty, setTy] = useState(0);
+
+  // Active pointers, the pinch baseline, the pan baseline, and the last tap
+  // time, all held in a ref so the gesture handlers do not re-run on render.
+  const gesture = useRef({
+    pointers: new Map(),
+    pinchStartDist: 0,
+    pinchStartScale: 1,
+    panStart: null,
+    lastTapAt: 0,
+  });
+
+  // Clamp the pan so the image cannot be dragged entirely off screen.
+  const clampPan = useCallback(
+    (nextScale, x, y) => {
+      const el = surfaceRef.current;
+      if (!el) return { x, y };
+      const rect = el.getBoundingClientRect();
+      const overflowX = (rect.width * (nextScale - 1)) / 2;
+      const overflowY = (rect.height * (nextScale - 1)) / 2;
+      return {
+        x: Math.max(-overflowX, Math.min(overflowX, x)),
+        y: Math.max(-overflowY, Math.min(overflowY, y)),
+      };
+    },
+    []
+  );
+
+  const resetView = useCallback(() => {
+    setScale(1);
+    setTx(0);
+    setTy(0);
+  }, []);
+
+  function onPointerDown(e) {
+    const g = gesture.current;
+    g.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    e.currentTarget.setPointerCapture(e.pointerId);
+
+    if (g.pointers.size === 2) {
+      const [p1, p2] = [...g.pointers.values()];
+      g.pinchStartDist = pinchDistance(p1, p2);
+      g.pinchStartScale = scale;
+      g.panStart = null;
+    } else if (g.pointers.size === 1) {
+      g.panStart = { x: e.clientX, y: e.clientY, tx, ty };
+
+      // Double-tap toggles between fit and a comfortable reading zoom.
+      const now = Date.now();
+      if (now - g.lastTapAt < 300) {
+        if (scale > 1.01) {
+          resetView();
+        } else {
+          setScale(ZOOM_DOUBLE_TAP);
+        }
+        g.lastTapAt = 0;
+      } else {
+        g.lastTapAt = now;
+      }
+    }
+  }
+
+  function onPointerMove(e) {
+    const g = gesture.current;
+    if (!g.pointers.has(e.pointerId)) return;
+    g.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (g.pointers.size === 2 && g.pinchStartDist > 0) {
+      const [p1, p2] = [...g.pointers.values()];
+      const dist = pinchDistance(p1, p2);
+      const nextScale = Math.max(
+        ZOOM_MIN,
+        Math.min(ZOOM_MAX, (g.pinchStartScale * dist) / g.pinchStartDist)
+      );
+      setScale(nextScale);
+      const clamped = clampPan(nextScale, tx, ty);
+      setTx(clamped.x);
+      setTy(clamped.y);
+    } else if (g.pointers.size === 1 && g.panStart && scale > 1) {
+      const dx = e.clientX - g.panStart.x;
+      const dy = e.clientY - g.panStart.y;
+      const clamped = clampPan(scale, g.panStart.tx + dx, g.panStart.ty + dy);
+      setTx(clamped.x);
+      setTy(clamped.y);
+    }
+  }
+
+  function endPointer(e) {
+    const g = gesture.current;
+    g.pointers.delete(e.pointerId);
+    if (g.pointers.size < 2) {
+      g.pinchStartDist = 0;
+    }
+    if (g.pointers.size === 0) {
+      g.panStart = null;
+    }
+  }
+
+  function onWheel(e) {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.2 : -0.2;
+    const nextScale = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, scale + delta));
+    setScale(nextScale);
+    const clamped = clampPan(nextScale, tx, ty);
+    setTx(clamped.x);
+    setTy(clamped.y);
+  }
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label={`Page image, ${image.label}`}
-      onClick={onClose}
       style={{
         position: 'fixed',
         inset: 0,
@@ -500,30 +634,60 @@ function Lightbox({ image, onClose }) {
         padding: 'var(--space-md)',
       }}
     >
-      <button
-        type="button"
-        className="icon-button"
-        onClick={onClose}
-        aria-label="Close image"
-        style={{ alignSelf: 'flex-end' }}
-      >
-        <X size={22} />
-      </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 'var(--space-sm)' }}>
+        <button
+          type="button"
+          className="pill-button"
+          onClick={resetView}
+          disabled={scale <= 1.01}
+          aria-label="Reset zoom"
+        >
+          Reset zoom
+        </button>
+        <button
+          type="button"
+          className="icon-button"
+          onClick={onClose}
+          aria-label="Close image"
+        >
+          <X size={22} />
+        </button>
+      </div>
+
       <div
+        ref={surfaceRef}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endPointer}
+        onPointerCancel={endPointer}
+        onWheel={onWheel}
         style={{
           flex: 1,
-          overflow: 'auto',
+          overflow: 'hidden',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          touchAction: 'none',
+          cursor: scale > 1 ? 'grab' : 'default',
         }}
       >
         <img
           src={image.imageUrl}
           alt={`Talmud page, ${image.label}`}
-          style={{ maxWidth: '100%', height: 'auto' }}
+          draggable={false}
+          style={{
+            maxWidth: '100%',
+            maxHeight: '100%',
+            height: 'auto',
+            transform: `translate(${tx}px, ${ty}px) scale(${scale})`,
+            transformOrigin: 'center center',
+            transition: gesture.current.pointers.size > 0 ? 'none' : 'transform 0.12s ease-out',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+          }}
         />
       </div>
+
       <p
         style={{
           color: '#FFFFFF',
@@ -532,6 +696,16 @@ function Lightbox({ image, onClose }) {
         }}
       >
         {image.label}
+      </p>
+      <p
+        style={{
+          color: '#9CA3AF',
+          textAlign: 'center',
+          margin: 'var(--space-xs) 0 0',
+          fontSize: '0.85rem',
+        }}
+      >
+        Pinch or double-tap to zoom. Drag to move the page.
       </p>
     </div>
   );

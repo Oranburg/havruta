@@ -91,11 +91,146 @@ async function getAmud(amudRef) {
   };
 }
 
+// Load any Sefaria ref's text: a commentary, a cited verse, a halakhic code,
+// a parallel passage. Same shape and same stripping as getAmud, so commentary
+// and connection panels render exactly like the daf does.
+// Returns { ref, heRef, he:[...], en:[...] }.
+export async function getSefariaText(ref) {
+  if (!ref) {
+    throw new Error('No reference was given to load.');
+  }
+  const url = `${API}/texts/${encodeURIComponent(ref)}?context=0&commentary=0`;
+  const data = await getJson(url);
+  return {
+    ref: data.ref || ref,
+    heRef: data.heRef || '',
+    he: flattenSegments(data.he),
+    en: flattenSegments(data.text).map(stripHtml),
+  };
+}
+
 // Load both amudim of a daf. A daf ref like "Chullin 44" has two sides.
 // Returns { a: {...}, b: {...} }.
 export async function getDafText(ref) {
   const [a, b] = await Promise.all([getAmud(`${ref}a`), getAmud(`${ref}b`)]);
   return { a, b };
+}
+
+// Fetch the link objects for one ref (one amud, or one verse).
+// `with_text=0` keeps the payload small; the text loads on demand when the
+// reader opens a connection or a commentator.
+async function getLinks(ref) {
+  const url = `${API}/links/${encodeURIComponent(ref)}?with_text=0`;
+  const data = await getJson(url);
+  return Array.isArray(data) ? data : [];
+}
+
+// Normalize one Sefaria link object to the small shape the UI renders.
+// Returns null for a link that lacks the fields the UI needs.
+function normalizeLink(link) {
+  if (!link || !link.ref) return null;
+  const collective = link.collectiveTitle || {};
+  const name = collective.en || link.index_title || link.ref;
+  return {
+    category: link.category || 'Other',
+    name,
+    heName: collective.he || '',
+    ref: link.ref,
+    anchorRef: link.anchorRef || '',
+  };
+}
+
+// Group a flat list of normalized links by commentator name, preserving the
+// order names first appear. Returns [{ name, heName, refs:[...] }].
+function groupByName(links) {
+  const order = [];
+  const byName = new Map();
+  links.forEach((link) => {
+    if (!byName.has(link.name)) {
+      order.push(link.name);
+      byName.set(link.name, { name: link.name, heName: link.heName, refs: [] });
+    }
+    byName.get(link.name).refs.push(link.ref);
+  });
+  return order.map((name) => byName.get(name));
+}
+
+// Load the links for both amudim of a daf, normalize, dedupe by ref, and group
+// them for display. Commentary is grouped by commentator (Rashi, Tosafot, and
+// the rest). Tanakh holds the verses the daf cites. Halakhah holds the codes
+// that cite the daf (Mishneh Torah, Tur, Shulchan Arukh). Talmud holds parallel
+// passages. Everything else lands in `other`, grouped by work.
+// Returns { commentary:[...], halakhah:[...], tanakh:[...], talmud:[...], other:[...] }.
+export async function getDafLinks(dafRef) {
+  const [aLinks, bLinks] = await Promise.all([
+    getLinks(`${dafRef}a`),
+    getLinks(`${dafRef}b`),
+  ]);
+
+  // Dedupe by linked ref across the two amudim.
+  const seen = new Set();
+  const all = [];
+  [...aLinks, ...bLinks].forEach((raw) => {
+    const link = normalizeLink(raw);
+    if (!link || seen.has(link.ref)) return;
+    seen.add(link.ref);
+    all.push(link);
+  });
+
+  const inCategory = (cat) => all.filter((link) => link.category === cat);
+
+  // The classic apparatus around the page sits in the Commentary category:
+  // Rashi, Tosafot, Rashba, Ramban, Meiri, Rabbeinu Gershom, Steinsaltz, and
+  // the rest that attach directly to this daf. The reader reads these beside the
+  // page, so they lead the Commentaries list.
+  const commentaryLinks = inCategory('Commentary');
+
+  // Quoting Commentary is a different relation: works elsewhere in the library
+  // that quote this daf. The reader follows those out, so they belong with the
+  // Connections rather than crowding the page's own commentators.
+  const quotingLinks = inCategory('Quoting Commentary');
+
+  // Everything not already surfaced in its own group becomes "other".
+  const namedCategories = new Set([
+    'Commentary',
+    'Quoting Commentary',
+    'Tanakh',
+    'Halakhah',
+    'Talmud',
+  ]);
+  const otherLinks = all.filter((link) => !namedCategories.has(link.category));
+
+  return {
+    commentary: groupByName(commentaryLinks),
+    halakhah: groupByName(inCategory('Halakhah')),
+    tanakh: groupByName(inCategory('Tanakh')),
+    talmud: groupByName(inCategory('Talmud')),
+    quoting: groupByName(quotingLinks),
+    other: groupByName(otherLinks),
+  };
+}
+
+// Load the commentaries on a single verse, grouped by commentator. A cited
+// Torah verse carries Onkelos in the Targum category and the rest under
+// Commentary; both are surfaced here so the reader follows the verse down into
+// its own commentary, Onkelos and Rashi among them, the way the page intends.
+// On a verse outside the Torah (for example a verse from Ecclesiastes) the
+// Targum group is simply empty and the commentary stands on its own.
+// Returns [{ name, heName, refs:[...] }].
+export async function getVerseCommentaries(verseRef) {
+  const raw = await getLinks(verseRef);
+  const seen = new Set();
+  const links = [];
+  raw.forEach((item) => {
+    if (!item || (item.category !== 'Commentary' && item.category !== 'Targum')) {
+      return;
+    }
+    const link = normalizeLink(item);
+    if (!link || seen.has(link.ref)) return;
+    seen.add(link.ref);
+    links.push(link);
+  });
+  return groupByName(links);
 }
 
 // Turn a manuscript slug into a human label.
