@@ -11,6 +11,7 @@ import {
   modelStorageFor,
   baseUrlStorageFor,
   migrateLegacyStorage,
+  effectiveDefaultProviderId,
 } from '../lib/partner.js';
 
 // The calibration dial. Friction is matched to capacity (docs/CONSTITUTION.md
@@ -119,7 +120,7 @@ export default function Settings() {
     let savedProvider = DEFAULT_PROVIDER_ID;
     try {
       savedProvider =
-        localStorage.getItem(PROVIDER_STORAGE) || DEFAULT_PROVIDER_ID;
+        localStorage.getItem(PROVIDER_STORAGE) || effectiveDefaultProviderId();
       const savedLevel = localStorage.getItem(LEVEL_STORAGE);
       setLevelIndex(savedLevel ? indexForLevel(savedLevel) : 2);
     } catch {
@@ -229,6 +230,11 @@ export default function Settings() {
             </option>
           ))}
         </select>
+        <p style={{ margin: 'var(--space-sm) 0 0', color: 'var(--muted)' }}>
+          Gemini has a free tier, so it can run at no cost. Claude, GPT, and
+          OpenRouter are paid and use your own account. Pick whichever you want;
+          switching is instant, and each provider keeps its own key.
+        </p>
         {provider.note && (
           <p style={{ margin: 'var(--space-sm) 0 0', color: 'var(--muted)' }}>
             {provider.note}

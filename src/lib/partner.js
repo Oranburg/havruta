@@ -59,6 +59,25 @@ export function migrateLegacyStorage() {
   }
 }
 
+// Choose the provider for someone who has not explicitly picked one. If any
+// provider already has a saved key, keep it, so an existing paid setup (including
+// a migrated Claude key) is never overridden. Only a newcomer with no key at all
+// is steered to the free path, Google Gemini's free tier. Call this after
+// migrateLegacyStorage so a migrated Claude key counts.
+export function effectiveDefaultProviderId() {
+  try {
+    if (localStorage.getItem(keyStorageFor(DEFAULT_PROVIDER_ID))) {
+      return DEFAULT_PROVIDER_ID;
+    }
+    for (const p of PROVIDERS) {
+      if (localStorage.getItem(keyStorageFor(p.id))) return p.id;
+    }
+  } catch {
+    // localStorage unavailable; fall through to the free default.
+  }
+  return 'google';
+}
+
 // Read the full active provider setting set: which provider is chosen, its key,
 // its model (defaulting to the provider's default), its base URL (the reader's
 // own for the custom provider, otherwise the provider default), and the
@@ -73,7 +92,7 @@ export function readProviderSettings() {
   let level = DEFAULT_LEVEL;
 
   try {
-    providerId = localStorage.getItem(PROVIDER_STORAGE) || DEFAULT_PROVIDER_ID;
+    providerId = localStorage.getItem(PROVIDER_STORAGE) || effectiveDefaultProviderId();
   } catch {
     // localStorage unavailable; fall back to the default provider.
   }

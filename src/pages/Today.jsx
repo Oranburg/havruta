@@ -11,7 +11,7 @@ import {
   ArrowDown,
 } from 'lucide-react';
 import { getTodaysDaf, getDafText, getDafImages } from '../lib/sefaria.js';
-import { KEY_STORAGE } from '../lib/partner.js';
+import { readProviderSettings } from '../lib/partner.js';
 import Havruta from '../components/Havruta.jsx';
 import Commentaries from '../components/Commentaries.jsx';
 import Connections from '../components/Connections.jsx';
@@ -280,7 +280,7 @@ function Header({ daf }) {
 
 function hasSavedKey() {
   try {
-    return Boolean(localStorage.getItem(KEY_STORAGE));
+    return Boolean(readProviderSettings().apiKey);
   } catch {
     return false;
   }
@@ -325,11 +325,12 @@ function PartnerIntro({ submitted }) {
         </h2>
         <p style={{ margin: '0 0 var(--space-md)' }}>
           This page has a study partner that challenges your reading instead of
-          explaining the daf. It runs on Claude with your own Anthropic key, kept
-          only on this device. Add your key once to begin.
+          explaining the daf. It runs on an AI model using your own key, kept only
+          on this device, and there is a free option so it need not cost anything.
+          Set it up once to begin.
         </p>
         <Link to="/settings" className="pill-button pill-button--active">
-          Add your key in Settings
+          Set up the partner in Settings
         </Link>
       </div>
     );

@@ -256,6 +256,197 @@ function labelFromSlug(slug) {
   return year ? `${name} (${year})` : name;
 }
 
+// Build the canonical Sefaria web page URL for a ref. Sefaria addresses a page
+// with spaces as underscores and the verse or amud separator as a dot, so
+// "Chullin 44a" becomes "Chullin.44a" and "Ecclesiastes 2:14" becomes
+// "Ecclesiastes_2.14". Both forms were verified to resolve (HTTP 200) on
+// 2026-06-13. The link opens the same text on Sefaria itself.
+export function sefariaUrl(ref) {
+  if (!ref) return 'https://www.sefaria.org/';
+  const path = String(ref).trim().replace(/ /g, '_').replace(/:/g, '.');
+  return `https://www.sefaria.org/${encodeURI(path)}`;
+}
+
+// Remove Hebrew vowel points (nikud) and cantillation marks from a word, so a
+// lookup that fails on the pointed form can be retried on the bare consonants.
+// The range U+0591 to U+05C7 covers the te'amim and the nekudot.
+function stripNikud(value) {
+  if (typeof value !== 'string') return '';
+  return value.replace(/[֑-ׇ]/g, '');
+}
+
+// Strip the surrounding punctuation a word may carry when it is split out of a
+// running line: the Talmud's gershayim and geresh, ordinary quotation marks,
+// commas, the maqaf, and the like. The Hebrew letters themselves are kept.
+function trimWordPunctuation(value) {
+  if (typeof value !== 'string') return '';
+  return value
+    .replace(/^[\s.,;:!?'"׳״()\[\]{}־–—“”‘’]+/, '')
+    .replace(/[\s.,;:!?'"׳״()\[\]{}־–—“”‘’]+$/, '')
+    .trim();
+}
+
+// Reduce one lexicon entry from Sefaria to the small shape the popover renders.
+// The senses come from entry.content.senses, each of which may carry HTML
+// (italics, cross-reference links, embedded Hebrew). Strip the HTML so the
+// definition reads as plain text, and drop senses that reduce to nothing (some
+// entries carry a bare "(b. h.)" marker sense with no definition).
+function normalizeLexiconEntry(entry) {
+  if (!entry) return null;
+  const content = entry.content || {};
+  const rawSenses = Array.isArray(content.senses) ? content.senses : [];
+  const senses = rawSenses
+    .map((sense) => {
+      const def = stripHtml(sense && sense.definition);
+      const num = sense && sense.number ? `${sense.number} ` : '';
+      return (num + def).trim();
+    })
+    .filter((text) => text.length > 0);
+  return {
+    lexicon: entry.parent_lexicon || 'Dictionary',
+    headword: entry.headword || entry.word || '',
+    senses,
+  };
+}
+
+// In-memory cache for word lookups, keyed by the exact string queried, so
+// tapping the same word twice in a session costs no second request. Sefaria's
+// API is open and the app should be a good citizen about repeat calls.
+const lexiconCache = new Map();
+
+// Fetch the raw lexicon array for one query string, caching the result. An
+// empty array (no entry) is a real, cacheable answer, not an error.
+async function fetchLexicon(query) {
+  if (lexiconCache.has(query)) return lexiconCache.get(query);
+  const url = `${API}/words/${encodeURIComponent(query)}`;
+  const data = await getJson(url);
+  const arr = Array.isArray(data) ? data : [];
+  lexiconCache.set(query, arr);
+  return arr;
+}
+
+// Order entries so Jastrow comes first. For the Talmud's Aramaic, Jastrow is
+// the dictionary that covers the rabbinic vocabulary; the biblical lexicons
+// (BDB, Klein) follow when present.
+function orderJastrowFirst(entries) {
+  return [...entries].sort((a, b) => {
+    const aj = /jastrow/i.test(a.lexicon) ? 0 : 1;
+    const bj = /jastrow/i.test(b.lexicon) ? 0 : 1;
+    return aj - bj;
+  });
+}
+
+// Look one Hebrew or Aramaic word up in Sefaria's lexicons.
+//
+// Returns { found, word, query, entries } where each entry is
+// { lexicon, headword, senses:[strings] }, with Jastrow ordered first.
+//
+// The Talmud is heavily Aramaic and the text Sefaria supplies carries vowel
+// points, so a word as it appears on the page is often an inflected, pointed
+// form that no dictionary indexes. The lookup tries three things in order: the
+// word as given, the word with its surrounding punctuation removed, and the
+// word with nikud and cantillation stripped. The first try that returns any
+// entry wins. When all three come back empty, the word genuinely has no
+// dictionary entry under any of these forms, and the function says so with
+// { found:false } rather than inventing a definition. The caller still offers
+// a Sefaria link so the reader can search the word there.
+export async function lookupWord(word) {
+  const original = typeof word === 'string' ? word.trim() : '';
+  if (!original) {
+    return { found: false, word: '', query: '', entries: [] };
+  }
+
+  const trimmed = trimWordPunctuation(original);
+  const bare = stripNikud(trimmed);
+
+  // Try the forms in order, skipping duplicates (a word with no nikud and no
+  // punctuation collapses the three attempts into one).
+  const attempts = [];
+  [original, trimmed, bare].forEach((q) => {
+    if (q && !attempts.includes(q)) attempts.push(q);
+  });
+
+  for (const query of attempts) {
+    let raw;
+    try {
+      raw = await fetchLexicon(query);
+    } catch {
+      // A network failure on one form should not invent a definition; move on
+      // and let a later form (or the final not-found) answer.
+      continue;
+    }
+    const entries = raw
+      .map(normalizeLexiconEntry)
+      .filter((e) => e && e.senses.length > 0);
+    if (entries.length > 0) {
+      return {
+        found: true,
+        word: trimmed || original,
+        query,
+        entries: orderJastrowFirst(entries),
+      };
+    }
+  }
+
+  return { found: false, word: trimmed || original, query: attempts[0], entries: [] };
+}
+
+// In-memory caches for translation work: the version list per ref, and each
+// named version's text per ref, so opening and reopening the compare panel
+// costs at most one request per version.
+const versionsCache = new Map();
+const versionTextCache = new Map();
+
+// List the English translations Sefaria carries for a ref. The versions API
+// returns every version in every language; this keeps the ones marked English.
+// Some versions tagged English are actually another language (their title ends
+// in a bracketed code like "[de]"); they are kept as Sefaria returns them and
+// shown under their own title, so the label is always honest about what it is.
+// Returns [{ versionTitle, language }], the default William Davidson first.
+export async function getTranslations(ref) {
+  if (!ref) return [];
+  if (versionsCache.has(ref)) return versionsCache.get(ref);
+
+  const url = `${API}/texts/versions/${encodeURIComponent(ref)}`;
+  const data = await getJson(url);
+  const arr = Array.isArray(data) ? data : (data && data.versions) || [];
+  const english = arr
+    .filter((v) => v && v.language === 'en' && v.versionTitle)
+    .map((v) => ({ versionTitle: v.versionTitle, language: v.language }));
+
+  // Put the William Davidson edition first; it is the default the page shows,
+  // and the comparison reads as "here is the default, and here are the others".
+  english.sort((a, b) => {
+    const aw = /william davidson/i.test(a.versionTitle) ? 0 : 1;
+    const bw = /william davidson/i.test(b.versionTitle) ? 0 : 1;
+    return aw - bw;
+  });
+
+  versionsCache.set(ref, english);
+  return english;
+}
+
+// Fetch one named English version's text for a ref, verbatim from Sefaria, and
+// return it as a single joined string with HTML stripped. The `ven` parameter
+// on the texts API selects a version by its exact title; this was the form that
+// reliably returned a named version on 2026-06-13 (the v3 version=lang|title
+// form did not). A segment-level ref returns that segment; an amud or verse ref
+// returns its segments joined. Returns '' when the version carries no text for
+// this ref, which the caller reports plainly rather than filling in.
+export async function getTranslationText(ref, versionTitle) {
+  if (!ref || !versionTitle) return '';
+  const cacheKey = `${ref}||${versionTitle}`;
+  if (versionTextCache.has(cacheKey)) return versionTextCache.get(cacheKey);
+
+  const url =
+    `${API}/texts/${encodeURIComponent(ref)}` +
+    `?context=0&commentary=0&ven=${encodeURIComponent(versionTitle)}`;
+  const data = await getJson(url);
+  const text = flattenSegments(data.text).map(stripHtml).filter(Boolean).join(' ');
+  versionTextCache.set(cacheKey, text);
+  return text;
+}
+
 // Get manuscript and print page images for an amud, e.g. "Chullin 44a".
 // The manuscripts endpoint addresses the amud with a dot: "Chullin.44a".
 // Returns [{ slug, imageUrl, label }], with the Vilna page sorted first.
