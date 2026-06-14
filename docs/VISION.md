@@ -8,6 +8,10 @@ Havruta is a daily Talmud study companion that argues with you. It follows the d
 
 The first reader is Seth: a curious adult who knows the alphabet, reads parsha sometimes, and looks things up, studying on a phone away from a desk. The design meets that reader and rises with him. Past that first reader, the same tool serves anyone on the daf yomi cycle who wants more than a translation: students who want to be pushed, groups who want to study together, learners in any language who want the page opened at the level of help they actually need.
 
+## A bridge, not a replacement
+
+The best place to learn the daf is a real beit midrash, with a partner across the table and a room full of voices. Not everyone can be there. Distance, time, health, and where life has put a person all keep people from the hall. People learn the daf in many ways now: in person, together on a video call, and alone on a phone in spare minutes. This app is for the ones who cannot get to the hall, and it does not claim to replace it. The hope is that it is a bridge. Studying this way keeps a person in the daf, and G-d willing it leads some of them toward the real thing, an in-person chevruta and a hall full of argument. The app should always point toward that, never pretend to be it.
+
 ## The principles that do not change
 
 The partner never invents a sacred text. It quotes what Sefaria supplies or it says nothing. This is the whole point of building the havruta rather than the oracle, and it is the safeguard against the failure that opens Chapter 13, where a machine confirmed six citations and five did not exist.
