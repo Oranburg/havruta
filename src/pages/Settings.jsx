@@ -183,10 +183,52 @@ export default function Settings() {
         </div>
         <p style={{ margin: 'var(--space-md) 0 0', color: 'var(--muted)' }}>
           The key is stored only in this browser. The app uses it to call Claude
-          directly, and sends it nowhere else. There is no server in between.
-          You get a key from the Anthropic Console, and your account pays for the
-          calls.
+          directly and sends it nowhere else. There is no server in between, and
+          your own account pays for the calls.
         </p>
+
+        <details style={{ marginTop: 'var(--space-md)' }}>
+          <summary
+            style={{
+              cursor: 'pointer',
+              fontFamily: 'var(--font-headline)',
+              fontWeight: 700,
+              color: 'var(--blue-light)',
+            }}
+          >
+            How to get a key
+          </summary>
+          <ol style={{ margin: 'var(--space-sm) 0 0', paddingLeft: '1.2rem', lineHeight: 1.7 }}>
+            <li>
+              Open the Anthropic Console at{' '}
+              <a
+                href="https://console.anthropic.com/settings/keys"
+                target="_blank"
+                rel="noreferrer"
+              >
+                console.anthropic.com
+              </a>
+              . This is the developer console, separate from the Claude app, so
+              sign in or create an account.
+            </li>
+            <li>
+              Add a little credit first, or the key will not work. Under Plans and
+              Billing, put a small pay-as-you-go amount on the account. Study runs
+              on a few dollars, and this is separate from any Claude subscription
+              you already pay for.
+            </li>
+            <li>
+              Go to Settings, then API Keys, and choose Create Key. Name it
+              something like Havruta.
+            </li>
+            <li>
+              Copy the key. It starts with{' '}
+              <code style={{ fontFamily: 'var(--font-mono)' }}>sk-ant-</code>, and
+              you see it only once.
+            </li>
+            <li>Paste it in the field above and Save.</li>
+          </ol>
+        </details>
       </div>
 
       <h2>Claude model</h2>
