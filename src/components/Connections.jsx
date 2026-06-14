@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, X } from 'lucide-react';
 import { getDafLinks, getVerseCommentaries } from '../lib/sefaria.js';
 import SefariaText from './SefariaText.jsx';
@@ -152,9 +152,52 @@ export default function Connections({ dafRef, heSize, enSize }) {
 // The full text of one connection, in a modal over the page. A verse connection
 // also lists the verse's own commentaries, each of which expands in place.
 function ConnectionPanel({ refToLoad, kind, heSize, enSize, onClose }) {
+  const panelRef = useRef(null);
+  const closeButtonRef = useRef(null);
+  const priorFocusRef = useRef(
+    typeof document !== 'undefined' ? document.activeElement : null
+  );
+
+  // Move focus to the close button when the panel mounts.
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => {
+      if (closeButtonRef.current) closeButtonRef.current.focus();
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, []);
+
+  // Restore focus to the opener when the panel unmounts.
+  useEffect(() => {
+    const prior = priorFocusRef.current;
+    return () => {
+      if (prior && typeof prior.focus === 'function') prior.focus();
+    };
+  }, []);
+
+  // Escape closes; Tab is trapped inside the panel.
   useEffect(() => {
     function onKey(e) {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusable = panel.querySelectorAll(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     }
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
@@ -177,6 +220,7 @@ function ConnectionPanel({ refToLoad, kind, heSize, enSize, onClose }) {
       }}
     >
       <div
+        ref={panelRef}
         onClick={(e) => e.stopPropagation()}
         style={{
           width: '100%',
@@ -202,6 +246,7 @@ function ConnectionPanel({ refToLoad, kind, heSize, enSize, onClose }) {
         >
           <h3 style={{ margin: 0 }}>{refToLoad}</h3>
           <button
+            ref={closeButtonRef}
             type="button"
             className="icon-button"
             onClick={onClose}

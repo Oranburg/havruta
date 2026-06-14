@@ -27,7 +27,12 @@ export function listSessions() {
 }
 
 function writeAll(sessions) {
-  localStorage.setItem(STORE_KEY, JSON.stringify(sessions));
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(sessions));
+  } catch {
+    // QuotaExceededError or private-mode restriction: the write silently fails.
+    // The session record was valid in memory for this visit; it just cannot persist.
+  }
 }
 
 // A short, sortable id. crypto.randomUUID when available, a fallback otherwise.
@@ -69,11 +74,6 @@ export function updateSession(id, fields) {
   all[idx] = updated;
   writeAll(all);
   return updated;
-}
-
-// Read one session by id.
-export function getSession(id) {
-  return listSessions().find((s) => s.id === id) || null;
 }
 
 // Delete one session by id.

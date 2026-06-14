@@ -112,9 +112,16 @@ export async function getSefariaText(ref) {
 }
 
 // Load both amudim of a daf. A daf ref like "Chullin 44" has two sides.
+// Amud a is required: if it fails the whole call rejects. Amud b is optional:
+// some final folios in a tractate have no second side, so a failure there
+// returns an empty amud rather than rejecting the whole daf.
 // Returns { a: {...}, b: {...} }.
 export async function getDafText(ref) {
-  const [a, b] = await Promise.all([getAmud(`${ref}a`), getAmud(`${ref}b`)]);
+  const emptyAmud = { ref: `${ref}b`, heRef: '', he: [], en: [], next: null, prev: null };
+  const [a, b] = await Promise.all([
+    getAmud(`${ref}a`),
+    getAmud(`${ref}b`).catch(() => emptyAmud),
+  ]);
   return { a, b };
 }
 
@@ -259,8 +266,8 @@ function labelFromSlug(slug) {
 }
 
 // Build the canonical Sefaria web page URL for a ref. Sefaria addresses a page
-// with spaces as underscores and the verse or amud separator as a dot, so
-// "Chullin 44a" becomes "Chullin.44a" and "Ecclesiastes 2:14" becomes
+// with spaces replaced by underscores and the colon verse separator replaced by
+// a dot, so "Chullin 44a" becomes "Chullin_44a" and "Ecclesiastes 2:14" becomes
 // "Ecclesiastes_2.14". Both forms were verified to resolve (HTTP 200) on
 // 2026-06-13. The link opens the same text on Sefaria itself.
 export function sefariaUrl(ref) {

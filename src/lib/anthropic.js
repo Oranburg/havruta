@@ -272,13 +272,3 @@ export async function streamPartner({
   }
 }
 
-// The original Anthropic-only entry point, kept working so nothing that imports
-// it breaks. It delegates to streamPartner on the Anthropic path with the
-// default Anthropic base URL.
-export async function streamHavruta(options) {
-  return streamPartner({
-    ...options,
-    provider: { protocol: 'anthropic' },
-    baseUrl: options.baseUrl || 'https://api.anthropic.com',
-  });
-}

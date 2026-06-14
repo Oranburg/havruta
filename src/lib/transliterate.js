@@ -216,33 +216,6 @@ function isTetragrammaton(letters) {
 }
 
 // ---------------------------------------------------------------------------
-// Aramaic detection (Section 5.1). Heuristic, by design.
-// ---------------------------------------------------------------------------
-
-export const ARAMAIC_FLAG = '[Aramaic: transliteration not available]';
-
-// Detect an Aramaic word by the markers the scheme names: the relative particle
-// de- (dalet + sheva prefix), the determined-state suffix -a (final alef after a
-// consonant with a vowel), and a few high-frequency Aramaic words. This is a
-// rough screen, not a parser. It runs per word on the pointed form.
-function looksAramaic(word) {
-  const bare = word.replace(/[֑-ׇ]/g, '');
-  // Common Aramaic words named in the scheme.
-  const COMMON = ['גברא', 'מילתא', 'היכא', 'דקא', 'לית'];
-  if (COMMON.includes(bare)) return true;
-  // The relative particle de-: dalet with sheva at the start of a word that has
-  // more letters after it.
-  if (word.startsWith(`ד${SHEVA}`) && bare.length >= 3) return true;
-  // Determined-state suffix: a word ending in alef preceded by a vowel-bearing
-  // consonant (kamats-alef or other full-vowel-alef), at least four letters.
-  if (bare.length >= 4 && bare.endsWith(ALEF)) {
-    // The alef carries no vowel of its own and follows a kamats: the -a ending.
-    if (word.includes(`${KAMATS}${ALEF}`) && word.endsWith(ALEF)) return true;
-  }
-  return false;
-}
-
-// ---------------------------------------------------------------------------
 // Parse a word into letter units, each carrying its base and its marks.
 // ---------------------------------------------------------------------------
 

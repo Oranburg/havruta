@@ -646,9 +646,63 @@ function pinchDistance(a, b) {
 // in view at every zoom level.
 function Lightbox({ image, onClose }) {
   const surfaceRef = useRef(null);
+  const closeButtonRef = useRef(null);
+  const dialogRef = useRef(null);
+  const priorFocusRef = useRef(
+    typeof document !== 'undefined' ? document.activeElement : null
+  );
+  const prefersReducedMotion =
+    typeof window !== 'undefined' && window.matchMedia
+      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      : false;
   const [scale, setScale] = useState(1);
   const [tx, setTx] = useState(0);
   const [ty, setTy] = useState(0);
+
+  // Move focus to the close button when the lightbox mounts.
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => {
+      if (closeButtonRef.current) closeButtonRef.current.focus();
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, []);
+
+  // Restore focus to the opener when the lightbox unmounts.
+  useEffect(() => {
+    const prior = priorFocusRef.current;
+    return () => {
+      if (prior && typeof prior.focus === 'function') prior.focus();
+    };
+  }, []);
+
+  // Escape closes; Tab is trapped inside the dialog.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      const focusable = dialog.querySelectorAll(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   // Active pointers, the pinch baseline, the pan baseline, and the last tap
   // time, all held in a ref so the gesture handlers do not re-run on render.
@@ -758,6 +812,7 @@ function Lightbox({ image, onClose }) {
 
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-label={`Page image, ${image.label}`}
@@ -782,6 +837,7 @@ function Lightbox({ image, onClose }) {
           Reset zoom
         </button>
         <button
+          ref={closeButtonRef}
           type="button"
           className="icon-button"
           onClick={onClose}
@@ -818,7 +874,7 @@ function Lightbox({ image, onClose }) {
             height: 'auto',
             transform: `translate(${tx}px, ${ty}px) scale(${scale})`,
             transformOrigin: 'center center',
-            transition: gesture.current.pointers.size > 0 ? 'none' : 'transform 0.12s ease-out',
+            transition: (prefersReducedMotion || gesture.current.pointers.size > 0) ? 'none' : 'transform 0.12s ease-out',
             userSelect: 'none',
             WebkitUserSelect: 'none',
           }}

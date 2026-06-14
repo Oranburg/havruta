@@ -20,7 +20,13 @@ import { lookupWord, sefariaUrl } from '../lib/sefaria.js';
 export default function WordPopover({ word, anchor, onClose }) {
   const [state, setState] = useState({ status: 'loading', result: null, error: null });
   const cardRef = useRef(null);
+  const closeButtonRef = useRef(null);
   const [pos, setPos] = useState(null);
+
+  // Remember what had focus before the popover opened so we can restore it.
+  const priorFocusRef = useRef(
+    typeof document !== 'undefined' ? document.activeElement : null
+  );
 
   // A phone gets the bottom sheet; a wider screen gets the anchored popover.
   // matchMedia is a standard web API and works inside a Capacitor wrap.
@@ -59,10 +65,46 @@ export default function WordPopover({ word, anchor, onClose }) {
     };
   }, [word]);
 
-  // Close on Escape, and close when the reader taps outside the card.
+  // Move focus to the close button when the popover mounts.
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => {
+      if (closeButtonRef.current) closeButtonRef.current.focus();
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, []);
+
+  // Restore focus to the element that opened the popover when it unmounts.
+  useEffect(() => {
+    const prior = priorFocusRef.current;
+    return () => {
+      if (prior && typeof prior.focus === 'function') prior.focus();
+    };
+  }, []);
+
+  // Escape closes; Tab is trapped inside the card.
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const card = cardRef.current;
+      if (!card) return;
+      const focusable = card.querySelectorAll(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
@@ -111,6 +153,7 @@ export default function WordPopover({ word, anchor, onClose }) {
           {word}
         </span>
         <button
+          ref={closeButtonRef}
           type="button"
           className="icon-button icon-button--sm"
           onClick={onClose}

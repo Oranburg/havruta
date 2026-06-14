@@ -32,13 +32,78 @@ export default defineConfig({
         ]
       },
       workbox: {
-        // Cache Sefaria text and the manuscript page images so a studied daf reopens offline.
+        // The default glob pattern includes every asset in dist/. Tighten it so
+        // large Mermaid JS chunks and image files are excluded from the precache:
+        // they land in runtimeCaching below and are cached on first use instead.
+        // This cuts the precache from ~3.4 MB to well under 500 KB.
+        globPatterns: [
+          // HTML shell and CSS are always small; always precache them.
+          '**/*.{html,css}',
+          // Only precache JS bundles that are not Mermaid/KaTeX/Cytoscape/Wardley.
+          // Those diagram chunks have names that embed the library name.
+          // We target the small entry-point JS (react-router, the app shell) by
+          // capping what we include via globIgnores, not size limits.
+        ],
+        globIgnores: [
+          // Exclude all image types from the precache; handled by runtimeCaching.
+          '**/*.{png,jpg,jpeg,webp,avif,svg,gif,ico}',
+          // Exclude the large Mermaid diagram chunks by their stable name patterns.
+          '**/mermaid*',
+          '**/katex*',
+          '**/cytoscape*',
+          '**/wardley*',
+          '**/cose-bilkent*',
+          '**/architectureDiagram*',
+          '**/sequenceDiagram*',
+          '**/flowDiagram*',
+          '**/ganttDiagram*',
+          '**/blockDiagram*',
+          '**/c4Diagram*',
+          '**/classDiagram*',
+          '**/vennDiagram*',
+          '**/xychartDiagram*',
+          '**/stateDiagram*',
+          '**/erDiagram*',
+          '**/journeyDiagram*',
+          '**/pieDiagram*',
+          '**/mindmapDiagram*',
+          '**/timelineDiagram*',
+          '**/requirementDiagram*',
+          '**/dagre*',
+          '**/arc*',
+          '**/channel*',
+          '**/layout*',
+          '**/defaultLocale*',
+          '**/diagram*',
+        ],
         runtimeCaching: [
+          // Large JS chunks not in the precache: serve stale-while-revalidate so
+          // they are available offline after a first visit and update in the background.
+          {
+            urlPattern: ({ request, url }) =>
+              request.destination === 'script' &&
+              url.pathname.startsWith('/havruta/'),
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'app-scripts', expiration: { maxEntries: 80 } }
+          },
+          // Local image assets (same origin, public/ directory).
+          {
+            urlPattern: ({ request, url }) =>
+              request.destination === 'image' &&
+              url.pathname.startsWith('/havruta/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'app-images',
+              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 30 }
+            }
+          },
+          // Sefaria text API: stale-while-revalidate so studied dapim open offline.
           {
             urlPattern: ({ url }) => url.hostname === 'www.sefaria.org',
             handler: 'StaleWhileRevalidate',
             options: { cacheName: 'sefaria-api', expiration: { maxEntries: 600 } }
           },
+          // Sefaria manuscript page images: cache-first (large and stable).
           {
             urlPattern: ({ url }) => url.hostname === 'manuscripts.sefaria.org',
             handler: 'CacheFirst',

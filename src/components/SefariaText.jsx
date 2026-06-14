@@ -1,6 +1,45 @@
 import { useEffect, useState } from 'react';
 import { getSefariaText } from '../lib/sefaria.js';
 
+// Sanitize an HTML string from Sefaria before injecting it into the DOM.
+// Creates a detached template element, strips dangerous tags and event-handler
+// attributes, and returns the safe innerHTML. Normal inline formatting
+// (em, strong, span, b, i, small) survives; script, style, iframe, object,
+// embed, and any on* attribute do not.
+function sanitizeSefariaHtml(html) {
+  if (typeof html !== 'string') return '';
+  const tmpl = document.createElement('template');
+  tmpl.innerHTML = html;
+  const root = tmpl.content;
+
+  // Walk every element in the fragment.
+  root.querySelectorAll('*').forEach((el) => {
+    const tag = el.tagName.toLowerCase();
+    if (['script', 'style', 'iframe', 'object', 'embed'].includes(tag)) {
+      el.remove();
+      return;
+    }
+    // Remove event-handler attributes (on*) and javascript: hrefs/srcs.
+    [...el.attributes].forEach((attr) => {
+      if (attr.name.startsWith('on')) {
+        el.removeAttribute(attr.name);
+        return;
+      }
+      if (
+        (attr.name === 'href' || attr.name === 'src') &&
+        /^\s*javascript:/i.test(attr.value)
+      ) {
+        el.removeAttribute(attr.name);
+      }
+    });
+  });
+
+  // Serialize back to a string.
+  const div = document.createElement('div');
+  div.appendChild(root.cloneNode(true));
+  return div.innerHTML;
+}
+
 // Render the verbatim text of one Sefaria ref: Hebrew or Aramaic in Hebrew
 // characters right to left, English alongside when Sefaria carries it, with the
 // work name and the Sefaria credit. The text is fetched here and never
@@ -98,7 +137,7 @@ export default function SefariaText({ refToLoad, heSize = 24, enSize = 18 }) {
                     lineHeight: 1.9,
                     margin: 0,
                   }}
-                  dangerouslySetInnerHTML={{ __html: he }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeSefariaHtml(he) }}
                 />
               )}
               {en && (

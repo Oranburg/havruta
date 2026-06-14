@@ -13,6 +13,10 @@ import { useEffect, useState } from 'react';
 // bar; the fill width changes without an added transition.
 export default function ScrollProgress() {
   const [progress, setProgress] = useState(0);
+  const prefersReducedMotion =
+    typeof window !== 'undefined' && window.matchMedia
+      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      : false;
 
   useEffect(() => {
     let frame = 0;
@@ -67,7 +71,8 @@ export default function ScrollProgress() {
           background:
             'linear-gradient(90deg, var(--blue-deep), var(--blue-light), var(--yellow))',
           // A subtle ease so the fill keeps up without lagging the scroll.
-          transition: 'width 0.08s linear',
+          // Omitted when the user prefers reduced motion.
+          transition: prefersReducedMotion ? 'none' : 'width 0.08s linear',
         }}
       />
     </div>

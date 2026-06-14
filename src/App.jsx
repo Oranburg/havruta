@@ -17,6 +17,9 @@ import Settings from './pages/Settings.jsx';
 import Learn from './pages/Learn.jsx';
 import Why from './pages/Why.jsx';
 import Find from './pages/Find.jsx';
+import Start from './pages/Start.jsx';
+import Terms from './pages/Terms.jsx';
+import Journey from './pages/Journey.jsx';
 import NotFound from './pages/NotFound.jsx';
 import InstallPrompt from './components/InstallPrompt.jsx';
 import NavDrawer from './components/NavDrawer.jsx';
@@ -42,7 +45,12 @@ function Header({ onOpenMenu, menuButtonRef }) {
   function toggleTheme() {
     const next = theme === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem(THEME_KEY, next);
+    try {
+      localStorage.setItem(THEME_KEY, next);
+    } catch {
+      // Private-browsing or storage-quota failure; the toggle still works for
+      // this session, it just will not persist.
+    }
     setTheme(next);
   }
 
@@ -137,6 +145,9 @@ export default function App() {
             <Route path="/learn" element={<Learn />} />
             <Route path="/why" element={<Why />} />
             <Route path="/find" element={<Find />} />
+            <Route path="/start" element={<Start />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/journey" element={<Journey />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Footer />
