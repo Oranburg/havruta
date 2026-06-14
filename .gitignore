@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+build/
+.vercel/
+.next/
+out/
+
+# Environment and secrets (never commit these)
+.env
+.env.*
+!.env.example
+*.local
+
+# The study record is private and stays on the device, never in the repo
+sessions/
+session-exports/
+*.session.md
+*.session.json
+
+# Logs and OS cruft
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+
+# Editor
+.idea/
+.vscode/
+*.swp
