@@ -17,7 +17,6 @@ import {
   sefariaUrl,
 } from '../lib/sefaria.js';
 import { readProviderSettings } from '../lib/partner.js';
-import { transliterate } from '../lib/transliterate.js';
 import Havruta from '../components/Havruta.jsx';
 import LineHavruta from '../components/LineHavruta.jsx';
 import Commentaries from '../components/Commentaries.jsx';
@@ -1022,10 +1021,12 @@ function Segment({
       }}
     >
       {showHebrew && he && (
-        <TappableHebrew html={he} fontSize={heSize} onWordTap={onWordTap} />
-      )}
-      {showHebrew && he && (showTranslit || open) && (
-        <TranslitLine he={he} heSize={heSize} />
+        <TappableHebrew
+          html={he}
+          fontSize={heSize}
+          onWordTap={onWordTap}
+          showTranslit={showTranslit || open}
+        />
       )}
       {showEnglish && en && (
         <p
@@ -1076,36 +1077,6 @@ function Segment({
         </div>
       )}
     </li>
-  );
-}
-
-// The transliteration line under a Hebrew segment. It runs the segment's Hebrew
-// through the rule-based transliterator and shows the Latin result as a quiet,
-// read-only pronunciation aid: smaller than the Hebrew, muted, left to right.
-// The Hebrew itself stays right to left and tappable; this is a separate line
-// beneath it. Sized as a fraction of the Hebrew size so growing the Hebrew grows
-// this in step, with a floor so it stays legible.
-function TranslitLine({ he, heSize }) {
-  const latin = transliterate(he);
-  if (!latin) return null;
-  const size = Math.max(14, Math.round(heSize * 0.6));
-  // Right-aligned so the romanization sits under the Hebrew, which begins at the
-  // right edge, letting the reader check the transliteration against the line it
-  // belongs to. The Latin itself still reads left to right (dir ltr).
-  return (
-    <p
-      dir="ltr"
-      style={{
-        fontFamily: 'var(--font-body)',
-        fontSize: `${size}px`,
-        lineHeight: 1.6,
-        color: 'var(--muted)',
-        margin: 'var(--space-xs) 0 0',
-        textAlign: 'right',
-      }}
-    >
-      {latin}
-    </p>
   );
 }
 
