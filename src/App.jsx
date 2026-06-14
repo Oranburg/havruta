@@ -16,6 +16,7 @@ import Archive from './pages/Archive.jsx';
 import Settings from './pages/Settings.jsx';
 import Learn from './pages/Learn.jsx';
 import Why from './pages/Why.jsx';
+import Find from './pages/Find.jsx';
 import NotFound from './pages/NotFound.jsx';
 import InstallPrompt from './components/InstallPrompt.jsx';
 import NavDrawer from './components/NavDrawer.jsx';
@@ -135,6 +136,7 @@ export default function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/learn" element={<Learn />} />
             <Route path="/why" element={<Why />} />
+            <Route path="/find" element={<Find />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Footer />
