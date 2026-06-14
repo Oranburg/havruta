@@ -9,12 +9,22 @@ import {
   Lock,
   MessageSquare,
   ArrowDown,
+  ExternalLink,
 } from 'lucide-react';
-import { getTodaysDaf, getDafText, getDafImages } from '../lib/sefaria.js';
+import {
+  getTodaysDaf,
+  getDafText,
+  getDafImages,
+  sefariaUrl,
+} from '../lib/sefaria.js';
 import { readProviderSettings } from '../lib/partner.js';
 import Havruta from '../components/Havruta.jsx';
 import Commentaries from '../components/Commentaries.jsx';
 import Connections from '../components/Connections.jsx';
+import ScrollProgress from '../components/ScrollProgress.jsx';
+import WordPopover from '../components/WordPopover.jsx';
+import TappableHebrew from '../components/TappableHebrew.jsx';
+import TranslationCompare from '../components/TranslationCompare.jsx';
 
 // Reading views the toggle offers.
 const VIEWS = [
@@ -79,6 +89,16 @@ export default function Today() {
   );
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
+  // One word-lookup popover is open at a time across both amudim. The Amud
+  // segments report a tapped word up to here, and the single WordPopover below
+  // renders it, so a second tap replaces the first rather than stacking.
+  const [activeWord, setActiveWord] = useState(null); // { word, rect } or null
+  const openWord = useCallback((word, el) => {
+    const rect = el ? el.getBoundingClientRect() : null;
+    setActiveWord({ word, rect });
+  }, []);
+  const closeWord = useCallback(() => setActiveWord(null), []);
+
   // The human-acts-first gate. The partner stays locked until the reader
   // submits a reading of their own. See docs/CONSTITUTION.md requirement 1.
   const [reading, setReading] = useState('');
@@ -90,6 +110,7 @@ export default function Today() {
     setError(null);
     setReading('');
     setReadingSubmitted(false);
+    setActiveWord(null);
     try {
       let dafInfo;
       if (ref) {
@@ -197,7 +218,26 @@ export default function Today() {
 
   return (
     <section>
+      <ScrollProgress />
+
       <Header daf={daf} />
+
+      {daf && (
+        <p style={{ margin: '0 0 var(--space-lg)' }}>
+          <a
+            href={sefariaUrl(daf.ref)}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+            }}
+          >
+            Open this daf on Sefaria <ExternalLink size={16} aria-hidden="true" />
+          </a>
+        </p>
+      )}
 
       <PartnerIntro submitted={readingSubmitted} />
 
@@ -225,6 +265,7 @@ export default function Today() {
             view={view}
             heSize={heSize}
             enSize={enSize}
+            onWordTap={openWord}
           />
           <Amud
             label="ב"
@@ -233,6 +274,7 @@ export default function Today() {
             view={view}
             heSize={heSize}
             enSize={enSize}
+            onWordTap={openWord}
           />
         </>
       )}
@@ -257,6 +299,14 @@ export default function Today() {
 
       {lightboxOpen && images.length > 0 && (
         <Lightbox image={images[0]} onClose={() => setLightboxOpen(false)} />
+      )}
+
+      {activeWord && (
+        <WordPopover
+          word={activeWord.word}
+          anchor={activeWord.rect}
+          onClose={closeWord}
+        />
       )}
     </section>
   );
@@ -712,9 +762,14 @@ function Lightbox({ image, onClose }) {
   );
 }
 
-function Amud({ label, amudName, amud, view, heSize, enSize }) {
+function Amud({ label, amudName, amud, view, heSize, enSize, onWordTap }) {
   const count = Math.max(amud.he.length, amud.en.length);
   const segments = Array.from({ length: count }, (_, i) => i);
+
+  // Sefaria addresses each segment of an amud by a one-based index appended to
+  // the amud ref: "Chullin 44a" becomes "Chullin 44a:1" for the first segment.
+  // The compare control loads that exact segment, so it needs this ref.
+  const amudRef = amud.ref || '';
 
   return (
     <section style={{ marginBottom: 'var(--space-2xl)' }}>
@@ -734,6 +789,7 @@ function Amud({ label, amudName, amud, view, heSize, enSize }) {
         {segments.map((i) => {
           const he = amud.he[i] || '';
           const en = amud.en[i] || '';
+          const segmentRef = amudRef ? `${amudRef}:${i + 1}` : '';
           return (
             <li
               key={i}
@@ -743,11 +799,7 @@ function Amud({ label, amudName, amud, view, heSize, enSize }) {
               }}
             >
               {(view === 'both' || view === 'hebrew') && he && (
-                <p
-                  className="hebrew"
-                  style={{ fontSize: `${heSize}px`, lineHeight: 1.9, margin: 0 }}
-                  dangerouslySetInnerHTML={{ __html: he }}
-                />
+                <TappableHebrew html={he} fontSize={heSize} onWordTap={onWordTap} />
               )}
               {(view === 'both' || view === 'english') && en && (
                 <p
@@ -761,6 +813,13 @@ function Amud({ label, amudName, amud, view, heSize, enSize }) {
                 >
                   {en}
                 </p>
+              )}
+              {(view === 'both' || view === 'english') && en && segmentRef && (
+                <TranslationCompare
+                  segmentRef={segmentRef}
+                  defaultEn={en}
+                  enSize={enSize}
+                />
               )}
             </li>
           );
