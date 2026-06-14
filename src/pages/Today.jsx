@@ -18,7 +18,6 @@ import {
 } from '../lib/sefaria.js';
 import { readProviderSettings } from '../lib/partner.js';
 import { transliterate } from '../lib/transliterate.js';
-import { detectOpener } from '../lib/openers.js';
 import Havruta from '../components/Havruta.jsx';
 import LineHavruta from '../components/LineHavruta.jsx';
 import Commentaries from '../components/Commentaries.jsx';
@@ -434,12 +433,11 @@ function PartnerIntro({ submitted }) {
   return (
     <div className="card" style={{ marginBottom: 'var(--space-lg)' }}>
       <p style={{ margin: '0 0 var(--space-sm)' }}>
-        Read a line, then take it up. Under any line below, open{' '}
-        <strong>Discuss this line</strong>: say in a sentence what the line is
-        doing, and your havruta challenges that reading using the line&rsquo;s
-        own words. The places where a new voice or an objection enters are
-        marked as the natural places to stop. Tap any Hebrew word to hear how to
-        say it and what it means.
+        Read a line, then open <strong>Discuss this line</strong> beneath it:
+        say in a sentence what the line is doing, and your havruta challenges
+        that reading using the line&rsquo;s own words. Stop wherever the page
+        gives you trouble; you need not discuss every line. Tap any Hebrew word
+        to hear how to say it and what it means.
       </p>
       <p style={{ margin: 0, color: 'var(--muted)', fontSize: '0.9rem' }}>
         When you want to pull the page together, a reading of the whole page
@@ -1015,7 +1013,6 @@ function Segment({
   const segmentLabel = `${amudName} ${index + 1}`;
   const showHebrew = view === 'both' || view === 'hebrew';
   const showEnglish = view === 'both' || view === 'english';
-  const opener = he ? detectOpener(he) : null;
 
   return (
     <li
@@ -1052,17 +1049,6 @@ function Segment({
       )}
 
       <div style={{ marginTop: 'var(--space-sm)' }}>
-        {!open && opener && (
-          <p
-            style={{
-              margin: '0 0 var(--space-xs)',
-              color: 'var(--accent-2)',
-              fontSize: '0.85rem',
-            }}
-          >
-            {opener.cue}
-          </p>
-        )}
         <button
           type="button"
           className={open ? 'pill-button pill-button--active' : 'pill-button'}
@@ -1072,11 +1058,7 @@ function Segment({
           style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
         >
           <MessageSquare size={16} aria-hidden="true" />
-          {open
-            ? 'Close this line'
-            : opener
-            ? 'Take up this line'
-            : 'Discuss this line'}
+          {open ? 'Close this line' : 'Discuss this line'}
         </button>
       </div>
 
@@ -1107,6 +1089,9 @@ function TranslitLine({ he, heSize }) {
   const latin = transliterate(he);
   if (!latin) return null;
   const size = Math.max(14, Math.round(heSize * 0.6));
+  // Right-aligned so the romanization sits under the Hebrew, which begins at the
+  // right edge, letting the reader check the transliteration against the line it
+  // belongs to. The Latin itself still reads left to right (dir ltr).
   return (
     <p
       dir="ltr"
@@ -1116,7 +1101,7 @@ function TranslitLine({ he, heSize }) {
         lineHeight: 1.6,
         color: 'var(--muted)',
         margin: 'var(--space-xs) 0 0',
-        textAlign: 'left',
+        textAlign: 'right',
       }}
     >
       {latin}

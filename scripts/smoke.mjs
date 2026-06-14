@@ -175,43 +175,9 @@ if (appSource) {
 }
 
 // ---------------------------------------------------------------------------
-// 5. Opener detection (src/lib/openers.js).
+// 5. Per-line partner message (src/lib/partner.js).
 // ---------------------------------------------------------------------------
-console.log('\n--- 5. Opener detection ---');
-
-let detectOpener;
-try {
-  const mod = await import('../src/lib/openers.js');
-  detectOpener = mod.detectOpener;
-  if (typeof detectOpener !== 'function') throw new Error('detectOpener is not a function');
-  pass('openers module imports');
-} catch (err) {
-  fail('openers module imports', err.message);
-  detectOpener = null;
-}
-
-if (detectOpener) {
-  const openerCases = [
-    { input: 'מֵתִיב רַב יִרְמְיָה', expectCue: true, label: 'objection opener (מתיב) detected' },
-    { input: 'אָמַר רַב יְהוּדָה אָמַר רַב', expectCue: true, label: 'new-voice opener (אמר) detected' },
-    { input: 'תָּנוּ רַבָּנַן', expectCue: true, label: 'taught-source opener (תנו רבנן) detected' },
-    { input: 'וּבְגוּלְגּוֹלֶת שֶׁיֵּשׁ בָּהּ נֶקֶב', expectCue: false, label: 'plain line yields no opener' },
-  ];
-  for (const { input, expectCue, label } of openerCases) {
-    const got = detectOpener(input);
-    const hasCue = Boolean(got && got.cue);
-    if (hasCue === expectCue) {
-      pass(label);
-    } else {
-      fail(label, `got ${JSON.stringify(got)}, expected cue=${expectCue}`);
-    }
-  }
-}
-
-// ---------------------------------------------------------------------------
-// 6. Per-line partner message (src/lib/partner.js).
-// ---------------------------------------------------------------------------
-console.log('\n--- 6. Per-line partner message ---');
+console.log('\n--- 5. Per-line partner message ---');
 
 let buildSegmentFirstUserMessage;
 try {
@@ -246,15 +212,14 @@ if (buildSegmentFirstUserMessage) {
 }
 
 // ---------------------------------------------------------------------------
-// 7. Line-level engagement wiring.
+// 6. Line-level engagement wiring.
 // ---------------------------------------------------------------------------
-console.log('\n--- 7. Line engagement wiring ---');
+console.log('\n--- 6. Line engagement wiring ---');
 
 const wiringFiles = [
   'src/lib/usePartnerConversation.js',
   'src/components/PartnerTurns.jsx',
   'src/components/LineHavruta.jsx',
-  'src/lib/openers.js',
 ];
 for (const f of wiringFiles) {
   if (existsSync(resolve(root, f))) {
@@ -268,8 +233,6 @@ try {
   const todaySrc = readFileSync(resolve(root, 'src/pages/Today.jsx'), 'utf8');
   if (todaySrc.includes('LineHavruta')) pass('Today.jsx wires LineHavruta');
   else fail('Today.jsx wires LineHavruta', 'LineHavruta not referenced');
-  if (todaySrc.includes("openers.js")) pass('Today.jsx wires opener detection');
-  else fail('Today.jsx wires opener detection', 'openers.js not imported');
 } catch (err) {
   fail('Today.jsx readable for wiring check', err.message);
 }
