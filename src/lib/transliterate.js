@@ -1,16 +1,29 @@
 // Deterministic, rule-based Hebrew transliterator for the Havruta app.
 //
-// This implements docs/TRANSLITERATION-SCHEME.md (Sephardi academic hybrid)
-// exactly: the consonant table with dagesh-conditioned begadkefat variants, the
-// nikud-to-vowel table, and the context rules for shva, alef, he, yod, vav,
-// dagesh forte, and kamats katan. The output is a Latin pronunciation aid over
-// the verbatim vocalized text. It never replaces the Hebrew, and it does not
-// guess beyond the rules. Hebrew is the source; this is a reading crutch.
+// One engine, several schemes. The structural rules (how the points are parsed,
+// when a shva is vocal, how a dagesh forte geminates, how vav and yod and alef
+// and he behave) are the same for every scheme. What changes between schemes is
+// the OUTPUT: which Latin letters a consonant or a vowel becomes, and a few vowel
+// values. A scheme is a configuration the engine reads, not a separate engine.
 //
-// The scheme covers Hebrew. Aramaic passages get a flag, not a transliteration,
-// per Section 5.1. The Tetragrammaton renders as HaShem, per Section 3.8.
+// The schemes:
+//   academic  Modern Israeli / Sephardi academic, with diacritics (ḥ, ʿ, ts).
+//             Kamatz = a, tav = t always. The most phonetically transparent.
+//   simple    The same pronunciation, written without diacritics: ch for ḥet and
+//             khaf, tz for tsadi, alef and ayin dropped. Easiest for an English
+//             reader.
+//   ashkenazi Yeshivish Ashkenazi pronunciation, a real second reading: kamatz
+//             becomes o (boruch), cholam becomes oy (Toyro), tzere becomes ei,
+//             and a tav without a dagesh becomes s (Shabbos). Vowels are
+//             faithful; syllable stress is not modeled (no scheme models it).
 //
-// Usage: transliterate(pointedHebrewString) -> Latin string.
+// The output is a Latin pronunciation aid over the verbatim vocalized text. It
+// never replaces the Hebrew and it does not guess beyond the rules. The Talmud
+// is heavily Aramaic, which uses the same letters and points, so the aid is
+// rougher on Aramaic; the disclaimer in the UI says so. The Tetragrammaton
+// renders as HaShem.
+//
+// Usage: transliterate(pointedHebrewString, schemeId='academic') -> Latin string.
 
 // ---------------------------------------------------------------------------
 // Unicode constants for the nikud and the dagesh.
@@ -38,9 +51,6 @@ const HE = 'ה';
 const YOD = 'י';
 const SHIN = 'ש';
 
-// Every combining nikud or cantillation mark sits in U+0591 to U+05C7. The set
-// below is the vowel marks we read; everything else combining is dropped before
-// processing (cantillation, meteg, and so on).
 const VOWEL_MARKS = new Set([
   SHEVA,
   HATAF_SEGOL,
@@ -56,13 +66,8 @@ const VOWEL_MARKS = new Set([
   KAMATS_KATAN,
 ]);
 
-// The point marks the code keeps attached to a base letter: the reading vowels,
-// the dagesh, and the shin/sin dots. Anything else combining (te'amim, meteg) is
-// dropped.
 const KEPT_MARKS = new Set([...VOWEL_MARKS, DAGESH, SHIN_DOT, SIN_DOT]);
 
-// Full vowels (anything that is not a sheva and not absence of a vowel). Used by
-// the dagesh-forte and alef rules.
 const FULL_VOWELS = new Set([
   HATAF_SEGOL,
   HATAF_PATAH,
@@ -77,63 +82,25 @@ const FULL_VOWELS = new Set([
   KAMATS_KATAN,
 ]);
 
-// Long vowels, for the shva rule (a shva after a long vowel is vocal). Tsere,
-// holam, and shuruk are long; hiriq male and tsere male are long. Shuruk and the
-// male forms are handled where the vowel is resolved, so the long set here lists
-// the simple long-vowel marks.
+// Long vowels, for the shva rule (a shva after a long vowel is vocal). Structural
+// and scheme-independent: it is about the point, not its spelling.
 const LONG_VOWELS = new Set([TSERE, HOLAM]);
 
-// The six begadkefat letters, which take a dagesh lene.
+// The six begadkefat letters, which take a dagesh lene. Finals are handled by the
+// per-scheme consonant table, not here.
 const BEGADKEFAT = new Set(['ב', 'ג', 'ד', 'כ', 'פ', 'ת']);
 
 // Gutturals and resh reject dagesh forte (no gemination).
 const NO_GEMINATION = new Set([ALEF, HE, 'ח', 'ע', 'ר']);
 
-// Base consonant outputs. Begadkefat letters and shin/sin are handled in code
-// because they depend on dagesh or the shin/sin dot. Final forms map to their
-// normal forms here.
-const CONSONANTS = {
-  'א': '', // alef: handled by rule (silent or hamza)
-  'ב': 'v', // bet/vet: overridden to b with dagesh
-  'ג': 'g', // gimel, always hard g
-  'ד': 'd', // dalet
-  'ה': 'h', // he: handled by rule at word end
-  'ו': 'v', // vav as consonant: handled by rule for holam/shuruk
-  'ז': 'z', // zayin
-  'ח': 'ḥ', // het, h with dot below
-  'ט': 't', // tet, merges with tav
-  'י': 'y', // yod as consonant: handled by rule for hiriq/tsere male
-  'כ': 'kh', // kaf/khaf: overridden to k with dagesh
-  'ך': 'kh', // final khaf
-  'ל': 'l', // lamed
-  'מ': 'm', // mem
-  'ם': 'm', // final mem
-  'נ': 'n', // nun
-  'ן': 'n', // final nun
-  'ס': 's', // samekh
-  'ע': 'ʿ', // ayin, modifier letter left half ring
-  'פ': 'f', // pe/fe: overridden to p with dagesh
-  'ף': 'f', // final fe
-  'צ': 'ts', // tsadi
-  'ץ': 'ts', // final tsadi
-  'ק': 'k', // kuf, merges with kaf
-  'ר': 'r', // resh
-  'ש': 'sh', // shin/sin: resolved by the shin/sin dot in code
-  'ת': 't', // tav, never s or th
-};
+// ---------------------------------------------------------------------------
+// The schemes.
+// ---------------------------------------------------------------------------
 
-// The dagesh-conditioned stop forms for the begadkefat letters.
-const BEGADKEFAT_STOP = {
-  'ב': 'b', // bet
-  'כ': 'k', // kaf
-  'פ': 'p', // pe
-  // gimel and dalet have no audible dagesh distinction; they stay g and d.
-};
-
-// Simple nikud-to-vowel outputs. Sheva is resolved by rule, not from this map.
-const VOWELS = {
+// Vowel spellings. academic and simple share these; ashkenazi differs.
+const VOWELS_ISRAELI = {
   [PATAH]: 'a',
-  [KAMATS]: 'a', // default; kamats katan handled by rule and the lookup table
+  [KAMATS]: 'a',
   [TSERE]: 'e',
   [SEGOL]: 'e',
   [HIRIQ]: 'i',
@@ -142,35 +109,135 @@ const VOWELS = {
   [HATAF_PATAH]: 'a',
   [HATAF_SEGOL]: 'e',
   [HATAF_KAMATS]: 'o',
-  [KAMATS_KATAN]: 'o', // explicitly encoded kamats katan
+  [KAMATS_KATAN]: 'o',
 };
 
-// High-frequency kamats-katan words, seeded per Section 3.6. The U+05B8 point
-// cannot be told apart from kamats gadol by code, so a small lookup catches the
-// most frequent words that read with o. The key is the bare consonant skeleton
-// (letters only, no nikud, no dagesh, no cantillation), which matches regardless
-// of how the source points or accents the word. The two seeds the scheme names
-// are kol and hokhmah; both are reliably kamats-katan words, so a consonant-only
-// key is safe for them. The disclaimer notes this is a known limitation.
-const KAMATS_KATAN_WORDS = {
-  // kol, "all" (kaf + lamed): kol, not kal.
-  'כל': 'kol',
-  // hokhmah (het + khaf + mem + he): hokhmah, not hakhmah.
-  'חכמה': 'ḥokhmah',
+const VOWELS_ASHKENAZI = {
+  [PATAH]: 'a',
+  [KAMATS]: 'o', // kamatz reads o: boruch, Dovid
+  [TSERE]: 'ei', // tzere reads ei: beis, Omein
+  [SEGOL]: 'e',
+  [HIRIQ]: 'i',
+  [HOLAM]: 'oy', // cholam reads oy: Toyro, Moishe
+  [KUBUTS]: 'u',
+  [HATAF_PATAH]: 'a',
+  [HATAF_SEGOL]: 'e',
+  [HATAF_KAMATS]: 'o',
+  [KAMATS_KATAN]: 'o',
 };
 
-// The bare consonant skeleton of a word: Hebrew letters only, every combining
-// mark removed. Used as the kamats-katan lookup key.
-function consonantSkeleton(units) {
-  return units.map((u) => u.base).join('');
+// The Latin a yod adds when it is a mater after a vowel (the glide). academic and
+// simple add i (e + i = ei). ashkenazi already spells tzere as ei, so a yod after
+// a tzere adds nothing; the other vowels still add i.
+const MATER_YOD_ISRAELI = {
+  [TSERE]: 'i',
+  [SEGOL]: 'i',
+  [PATAH]: 'i',
+  [KAMATS]: 'i',
+};
+const MATER_YOD_ASHKENAZI = {
+  [TSERE]: '',
+  [SEGOL]: 'i',
+  [PATAH]: 'i',
+  [KAMATS]: 'i',
+};
+
+// Consonant outputs for the letters handled in the general branch (alef, he, vav,
+// yod, and shin are handled by their own rules and do not read these). Finals are
+// included because they are handled here, not in the begadkefat branch.
+const CONSONANTS_ACADEMIC = {
+  'א': '', 'ב': 'v', 'ג': 'g', 'ד': 'd', 'ה': 'h', 'ו': 'v', 'ז': 'z',
+  'ח': 'ḥ', 'ט': 't', 'י': 'y', 'כ': 'kh', 'ך': 'kh', 'ל': 'l', 'מ': 'm',
+  'ם': 'm', 'נ': 'n', 'ן': 'n', 'ס': 's', 'ע': 'ʿ', 'פ': 'f', 'ף': 'f',
+  'צ': 'ts', 'ץ': 'ts', 'ק': 'k', 'ר': 'r', 'ש': 'sh', 'ת': 't',
+};
+const CONSONANTS_SIMPLE = {
+  'א': '', 'ב': 'v', 'ג': 'g', 'ד': 'd', 'ה': 'h', 'ו': 'v', 'ז': 'z',
+  'ח': 'ch', 'ט': 't', 'י': 'y', 'כ': 'ch', 'ך': 'ch', 'ל': 'l', 'מ': 'm',
+  'ם': 'm', 'נ': 'n', 'ן': 'n', 'ס': 's', 'ע': '', 'פ': 'f', 'ף': 'f',
+  'צ': 'tz', 'ץ': 'tz', 'ק': 'k', 'ר': 'r', 'ש': 'sh', 'ת': 't',
+};
+// Ashkenazi shares the simple consonant spellings except where the begadkefat
+// fricative table overrides (the tav without a dagesh becomes s there).
+const CONSONANTS_ASHKENAZI = { ...CONSONANTS_SIMPLE };
+
+const BEGADKEFAT_STOP = {
+  'ב': 'b', 'כ': 'k', 'פ': 'p', 'ג': 'g', 'ד': 'd', 'ת': 't',
+};
+const BEGADKEFAT_FRICATIVE_ACADEMIC = {
+  'ב': 'v', 'כ': 'kh', 'פ': 'f', 'ג': 'g', 'ד': 'd', 'ת': 't',
+};
+const BEGADKEFAT_FRICATIVE_SIMPLE = {
+  'ב': 'v', 'כ': 'ch', 'פ': 'f', 'ג': 'g', 'ד': 'd', 'ת': 't',
+};
+const BEGADKEFAT_FRICATIVE_ASHKENAZI = {
+  'ב': 'v', 'כ': 'ch', 'פ': 'f', 'ג': 'g', 'ד': 'd', 'ת': 's', // tav rafe = s
+};
+
+const SCHEMES = {
+  academic: {
+    id: 'academic',
+    consonants: CONSONANTS_ACADEMIC,
+    begadkefatStop: BEGADKEFAT_STOP,
+    begadkefatFricative: BEGADKEFAT_FRICATIVE_ACADEMIC,
+    vowels: VOWELS_ISRAELI,
+    materYod: MATER_YOD_ISRAELI,
+    shinDot: 'sh',
+    sinDot: 's',
+    alefHamza: 'ʾ',
+    shuruk: 'u',
+    tetragrammaton: 'HaShem',
+    kamatsKatanWords: { 'כל': 'kol', 'חכמה': 'ḥokhmah' },
+  },
+  simple: {
+    id: 'simple',
+    consonants: CONSONANTS_SIMPLE,
+    begadkefatStop: BEGADKEFAT_STOP,
+    begadkefatFricative: BEGADKEFAT_FRICATIVE_SIMPLE,
+    vowels: VOWELS_ISRAELI,
+    materYod: MATER_YOD_ISRAELI,
+    shinDot: 'sh',
+    sinDot: 's',
+    alefHamza: '',
+    shuruk: 'u',
+    tetragrammaton: 'HaShem',
+    kamatsKatanWords: { 'כל': 'kol', 'חכמה': 'chochma' },
+  },
+  ashkenazi: {
+    id: 'ashkenazi',
+    consonants: CONSONANTS_ASHKENAZI,
+    begadkefatStop: BEGADKEFAT_STOP,
+    begadkefatFricative: BEGADKEFAT_FRICATIVE_ASHKENAZI,
+    vowels: VOWELS_ASHKENAZI,
+    materYod: MATER_YOD_ASHKENAZI,
+    shinDot: 'sh',
+    sinDot: 's',
+    alefHamza: '',
+    shuruk: 'u',
+    tetragrammaton: 'HaShem',
+    // No override needed: kamatz already reads o, so kol and chochmoh fall out
+    // of the rules.
+    kamatsKatanWords: {},
+  },
+};
+
+export const DEFAULT_SCHEME_ID = 'academic';
+
+// The schemes offered in the UI dropdown, in order. "None" is added by the UI.
+export const TRANSLIT_SCHEMES = [
+  { id: 'academic', label: 'Modern Israeli (academic)' },
+  { id: 'simple', label: 'Modern Israeli (simple)' },
+  { id: 'ashkenazi', label: 'Yeshivish Ashkenazi' },
+];
+
+function getScheme(schemeId) {
+  return SCHEMES[schemeId] || SCHEMES[DEFAULT_SCHEME_ID];
 }
 
 // ---------------------------------------------------------------------------
-// Pre-processing: strip HTML and cantillation, normalize, detect special cases.
+// Pre-processing.
 // ---------------------------------------------------------------------------
 
-// Strip HTML tags and decode the entities Sefaria uses, matching the data
-// layer's own stripping so the words read as plain pointed Hebrew.
 function stripHtml(value) {
   if (typeof value !== 'string') return '';
   return value
@@ -183,9 +250,6 @@ function stripHtml(value) {
     .replace(/&#39;/g, "'");
 }
 
-// Drop every combining mark we do not read: cantillation (te'amim), meteg, and
-// any stray combining point outside the kept set. Keeps the reading vowels, the
-// dagesh, and the shin/sin dots.
 function stripUnreadMarks(value) {
   let out = '';
   for (const ch of value) {
@@ -197,14 +261,11 @@ function stripUnreadMarks(value) {
   return out;
 }
 
-// Is this a Hebrew base consonant letter (U+05D0 to U+05EA)?
 function isHebrewLetter(ch) {
   const code = ch.codePointAt(0);
   return code >= 0x05d0 && code <= 0x05ea;
 }
 
-// The Tetragrammaton: yod, he, vav, he in sequence, ignoring any nikud between
-// the letters. Renders as HaShem per Section 3.8.
 function isTetragrammaton(letters) {
   if (letters.length !== 4) return false;
   return (
@@ -215,12 +276,14 @@ function isTetragrammaton(letters) {
   );
 }
 
+function consonantSkeleton(units) {
+  return units.map((u) => u.base).join('');
+}
+
 // ---------------------------------------------------------------------------
-// Parse a word into letter units, each carrying its base and its marks.
+// Parse a word into letter units.
 // ---------------------------------------------------------------------------
 
-// A letter unit: the base consonant plus the marks attached to it (vowel,
-// dagesh, shin/sin dot). Combining marks always follow their base in the string.
 function parseLetters(word) {
   const units = [];
   for (const ch of word) {
@@ -229,16 +292,11 @@ function parseLetters(word) {
       units.push({ base: ch, marks: [] });
     } else if (code >= 0x0591 && code <= 0x05c7) {
       if (units.length > 0) units[units.length - 1].marks.push(ch);
-      // A combining mark with no base before it is dropped.
     }
-    // Non-Hebrew characters inside a word (rare) are dropped from the unit list;
-    // they are handled at the token level, not here.
   }
   return units;
 }
 
-// The reading vowel of a unit, if any (the first vowel mark found). Returns the
-// mark character or null. Sheva is returned too; callers decide vocal vs silent.
 function vowelOf(unit) {
   for (const m of unit.marks) {
     if (VOWEL_MARKS.has(m)) return m;
@@ -258,25 +316,19 @@ function hasMark(unit, mark) {
 // The per-word transliterator.
 // ---------------------------------------------------------------------------
 
-function transliterateWord(rawWord) {
-  // Keep only the marks we read, then parse into letter units.
+function transliterateWord(rawWord, scheme) {
   const word = stripUnreadMarks(rawWord);
   const units = parseLetters(word);
   if (units.length === 0) return '';
 
-  // Tetragrammaton substitution, before any character-level work.
-  if (isTetragrammaton(units)) return 'HaShem';
+  if (isTetragrammaton(units)) return scheme.tetragrammaton;
 
-  // Kamats-katan lookup on the bare consonant skeleton. Catches the seeded
-  // high-frequency words that read with o rather than the default a.
   const skeleton = consonantSkeleton(units);
-  if (Object.prototype.hasOwnProperty.call(KAMATS_KATAN_WORDS, skeleton)) {
-    return KAMATS_KATAN_WORDS[skeleton];
+  if (Object.prototype.hasOwnProperty.call(scheme.kamatsKatanWords, skeleton)) {
+    return scheme.kamatsKatanWords[skeleton];
   }
 
   let out = '';
-  // The vowel class emitted just before the current position, for the shva rule
-  // and the intervocalic-alef rule. One of: null, 'short', 'long', 'sheva'.
   let prevVowelClass = null;
 
   for (let i = 0; i < units.length; i++) {
@@ -287,44 +339,39 @@ function transliterateWord(rawWord) {
     const base = unit.base;
     const vowel = vowelOf(unit);
 
-    // --- Vav: consonant, holam vav, or shuruk (Section 2 vav disambiguation).
+    // --- Vav.
     if (base === VAV) {
       if (hasMark(unit, HOLAM)) {
-        // Holam vav: the vav is the vowel carrier. Emit o, no v.
-        out += 'o';
+        out += scheme.vowels[HOLAM];
         prevVowelClass = 'long';
         continue;
       }
-      // Shuruk: vav with dagesh that opens the syllable. The heuristic: a
-      // vav-with-dagesh is shuruk when the preceding letter has no full vowel
-      // (so the vav is the nucleus), or the vav opens the word.
       if (hasDagesh(unit) && !hasMark(unit, HOLAM)) {
         const prevVowel = prev ? vowelOf(prev) : null;
         const prevHasFullVowel = prevVowel && FULL_VOWELS.has(prevVowel);
         if (isFirst || !prevHasFullVowel) {
-          out += 'u';
+          out += scheme.shuruk;
           prevVowelClass = 'long';
           continue;
         }
       }
-      // Otherwise the vav is a consonant.
       out += 'v';
       if (vowel) {
-        out += emitVowel(unit, vowel, units, i);
-        prevVowelClass = vowelClass(vowel);
+        if (vowel === SHEVA) {
+          const e = resolveSheva(units, i, prevVowelClass);
+          out += e;
+          prevVowelClass = e ? 'sheva' : null;
+        } else {
+          out += emitVowel(unit, vowel, scheme);
+          prevVowelClass = vowelClass(vowel);
+        }
       } else {
         prevVowelClass = null;
       }
       continue;
     }
 
-    // --- Yod: consonant, or the vowel partner of a preceding vowel.
-    // A yod with no own vowel that is not word-initial reads as a mater or a
-    // glide. The scheme's worked examples (Section 4) set the outputs: after
-    // hiriq it is hiriq male and adds nothing (the i is already there, so korin
-    // not koriin); after tsere, segol, patach, or kamats it forms a glide and
-    // reads i (meʾeimatai: tsere yod gives ei, the final patach yod gives ai).
-    // After a consonant with no vowel it is itself a consonant and reads y.
+    // --- Yod.
     if (base === YOD) {
       const prevVowel = prev ? vowelOf(prev) : null;
       if (!isFirst && !vowel && prev) {
@@ -339,66 +386,22 @@ function transliterateWord(rawWord) {
           prevVowel === PATAH ||
           prevVowel === KAMATS
         ) {
-          // Glide yod: e + i = ei, a + i = ai, and so on.
-          out += 'i';
+          const add = Object.prototype.hasOwnProperty.call(scheme.materYod, prevVowel)
+            ? scheme.materYod[prevVowel]
+            : 'i';
+          out += add;
           prevVowelClass = 'long';
           continue;
         }
       }
-      // Yod as consonant.
       out += 'y';
-      if (vowel) {
-        out += emitVowel(unit, vowel, units, i);
-        prevVowelClass = vowelClass(vowel);
-      } else {
-        prevVowelClass = null;
-      }
-      continue;
-    }
-
-    // --- Alef: silent at boundaries, hamza intervocalically (Section 3.2).
-    if (base === ALEF) {
-      const carriesFullVowel = vowel && vowel !== SHEVA && FULL_VOWELS.has(vowel);
-      const precededByVowelSound =
-        prevVowelClass === 'short' || prevVowelClass === 'long';
-      if (carriesFullVowel && !isFirst && precededByVowelSound) {
-        // Intervocalic alef anchoring a root: emit the hamza, then the vowel.
-        out += 'ʾ'; // modifier letter right half ring
-        out += emitVowel(unit, vowel, units, i);
-        prevVowelClass = vowelClass(vowel);
-      } else if (carriesFullVowel) {
-        // Word-initial or post-consonant alef: silent, emit only the vowel.
-        out += emitVowel(unit, vowel, units, i);
-        prevVowelClass = vowelClass(vowel);
-      } else if (vowel === SHEVA) {
-        // Alef with sheva: treat the sheva by the general rule, alef silent.
-        const e = resolveSheva(units, i, prevVowelClass);
-        out += e;
-        prevVowelClass = e ? 'sheva' : prevVowelClass;
-      } else {
-        // Final or vowelless alef: silent, nothing emitted.
-        // prevVowelClass unchanged.
-      }
-      continue;
-    }
-
-    // --- He: consonant, or silent final mater (Section 3.3).
-    if (base === HE) {
-      const isFinal = isLast;
-      const mappiq = hasDagesh(unit); // mappiq is a dagesh in final he
-      if (isFinal && !mappiq && !vowel) {
-        // Final he as mater lectionis: silent. The vowel before it is emitted.
-        continue;
-      }
-      // He with mappiq, or non-final he, or final he carrying its own vowel.
-      out += 'h';
       if (vowel) {
         if (vowel === SHEVA) {
           const e = resolveSheva(units, i, prevVowelClass);
           out += e;
           prevVowelClass = e ? 'sheva' : null;
         } else {
-          out += emitVowel(unit, vowel, units, i);
+          out += emitVowel(unit, vowel, scheme);
           prevVowelClass = vowelClass(vowel);
         }
       } else {
@@ -407,11 +410,52 @@ function transliterateWord(rawWord) {
       continue;
     }
 
-    // --- Shin / sin: resolved by the shin or sin dot.
+    // --- Alef.
+    if (base === ALEF) {
+      const carriesFullVowel = vowel && vowel !== SHEVA && FULL_VOWELS.has(vowel);
+      const precededByVowelSound =
+        prevVowelClass === 'short' || prevVowelClass === 'long';
+      if (carriesFullVowel && !isFirst && precededByVowelSound) {
+        out += scheme.alefHamza;
+        out += emitVowel(unit, vowel, scheme);
+        prevVowelClass = vowelClass(vowel);
+      } else if (carriesFullVowel) {
+        out += emitVowel(unit, vowel, scheme);
+        prevVowelClass = vowelClass(vowel);
+      } else if (vowel === SHEVA) {
+        const e = resolveSheva(units, i, prevVowelClass);
+        out += e;
+        prevVowelClass = e ? 'sheva' : prevVowelClass;
+      }
+      continue;
+    }
+
+    // --- He.
+    if (base === HE) {
+      const isFinal = isLast;
+      const mappiq = hasDagesh(unit);
+      if (isFinal && !mappiq && !vowel) {
+        continue;
+      }
+      out += 'h';
+      if (vowel) {
+        if (vowel === SHEVA) {
+          const e = resolveSheva(units, i, prevVowelClass);
+          out += e;
+          prevVowelClass = e ? 'sheva' : null;
+        } else {
+          out += emitVowel(unit, vowel, scheme);
+          prevVowelClass = vowelClass(vowel);
+        }
+      } else {
+        prevVowelClass = null;
+      }
+      continue;
+    }
+
+    // --- Shin / sin.
     if (base === SHIN) {
-      let cons;
-      if (hasMark(unit, SIN_DOT)) cons = 's';
-      else cons = 'sh'; // shin dot, or unmarked: default to shin
+      const cons = hasMark(unit, SIN_DOT) ? scheme.sinDot : scheme.shinDot;
       out += applyGemination(cons, unit, prev, base);
       if (vowel) {
         if (vowel === SHEVA) {
@@ -419,7 +463,7 @@ function transliterateWord(rawWord) {
           out += e;
           prevVowelClass = e ? 'sheva' : null;
         } else {
-          out += emitVowel(unit, vowel, units, i);
+          out += emitVowel(unit, vowel, scheme);
           prevVowelClass = vowelClass(vowel);
         }
       } else {
@@ -431,16 +475,13 @@ function transliterateWord(rawWord) {
     // --- Begadkefat and all other consonants.
     let cons;
     if (BEGADKEFAT.has(base)) {
-      // Dagesh lene gives the stop; no dagesh gives the fricative. Classify the
-      // dagesh: forte if the previous letter carries a full vowel (open syllable
-      // before it), otherwise lene.
       if (hasDagesh(unit)) {
-        cons = BEGADKEFAT_STOP[base] || CONSONANTS[base]; // gimel/dalet unchanged
+        cons = scheme.begadkefatStop[base] || scheme.consonants[base];
       } else {
-        cons = CONSONANTS[base]; // fricative form
+        cons = scheme.begadkefatFricative[base];
       }
     } else {
-      cons = CONSONANTS[base] || '';
+      cons = scheme.consonants[base] || '';
     }
 
     out += applyGemination(cons, unit, prev, base);
@@ -451,7 +492,7 @@ function transliterateWord(rawWord) {
         out += e;
         prevVowelClass = e ? 'sheva' : null;
       } else {
-        out += emitVowel(unit, vowel, units, i);
+        out += emitVowel(unit, vowel, scheme);
         prevVowelClass = vowelClass(vowel);
       }
     } else {
@@ -462,55 +503,35 @@ function transliterateWord(rawWord) {
   return out;
 }
 
-// Emit the vowel for a unit. Handles kamats default (a), and the male forms are
-// already handled by the yod and vav branches, so the vowel mark alone is
-// emitted here. Kamats katan is only emitted as o when explicitly encoded
-// (U+05C7) or caught by the word lookup; otherwise kamats defaults to a.
-function emitVowel(unit, vowel, units, i) {
+function emitVowel(unit, vowel, scheme) {
   if (vowel === SHEVA) return '';
-  return VOWELS[vowel] || '';
+  return scheme.vowels[vowel] || '';
 }
 
-// Classify a vowel mark as 'short' or 'long' for the shva and alef rules.
-// Tsere and holam are long; the male forms resolve to long where they occur.
 function vowelClass(vowel) {
   if (!vowel || vowel === SHEVA) return 'sheva';
   if (LONG_VOWELS.has(vowel)) return 'long';
   return 'short';
 }
 
-// Resolve a sheva to e (vocal) or '' (silent), per Section 3.1.
-// Vocal when: first letter of the word; immediately after another sheva; on a
-// letter with dagesh forte; or after a long vowel. Silent otherwise.
 function resolveSheva(units, i, prevVowelClass) {
   const unit = units[i];
   const prev = i > 0 ? units[i - 1] : null;
 
-  // First letter of the word.
   if (i === 0) return 'e';
 
-  // Immediately follows another sheva.
   if (prev) {
     const prevVowel = vowelOf(prev);
     if (prevVowel === SHEVA) return 'e';
   }
 
-  // The letter carries a dagesh forte. A dagesh on a begadkefat letter is forte
-  // when the previous letter has a full vowel; a dagesh on any other letter is
-  // forte (except gutturals and resh, which reject it).
   if (hasDagesh(unit) && isDageshForte(units, i)) return 'e';
 
-  // Follows a long vowel (tsere, holam, shuruk, hiriq male, tsere male). The
-  // prevVowelClass already records the male forms as 'long'.
   if (prevVowelClass === 'long') return 'e';
 
   return '';
 }
 
-// Decide whether a dagesh on the unit at index i is forte (gemination) rather
-// than lene (Section 3.5). Gutturals and resh never geminate. A dagesh on a
-// non-begadkefat letter is forte. A dagesh on a begadkefat letter is forte when
-// the preceding letter carries a full vowel (open syllable before it).
 function isDageshForte(units, i) {
   const unit = units[i];
   if (!hasDagesh(unit)) return false;
@@ -522,23 +543,16 @@ function isDageshForte(units, i) {
   return Boolean(prevVowel && FULL_VOWELS.has(prevVowel));
 }
 
-// Double the consonant output when the unit carries a dagesh forte. Vav is
-// excluded here because it is handled in its own branch. The doubling is applied
-// to the full consonant string (so a forte dagesh on tsadi gives tsts; the
-// scheme says double the output in full).
 function applyGemination(cons, unit, prev, base) {
   if (!cons) return cons;
-  if (base === VAV) return cons; // vav handled separately
+  if (base === VAV) return cons;
   if (NO_GEMINATION.has(base)) return cons;
   if (!hasDagesh(unit)) return cons;
-  // Begadkefat: a dagesh is forte only after a full vowel; otherwise it is the
-  // lene that selected the stop form, not gemination.
   if (BEGADKEFAT.has(base)) {
     const prevVowel = prev ? vowelOf(prev) : null;
     const forte = Boolean(prevVowel && FULL_VOWELS.has(prevVowel));
     return forte ? cons + cons : cons;
   }
-  // Any other letter with a dagesh: forte, so double.
   return cons + cons;
 }
 
@@ -546,46 +560,6 @@ function applyGemination(cons, unit, prev, base) {
 // Public entry point.
 // ---------------------------------------------------------------------------
 
-// Transliterate a pointed Hebrew string to a Latin pronunciation aid.
-// Strips HTML and cantillation first, splits on whitespace, transliterates each
-// word, flags Aramaic words, and rejoins on single spaces. Returns '' for empty
-// or non-string input.
-export function transliterate(pointedHebrewString) {
-  if (typeof pointedHebrewString !== 'string') return '';
-
-  // Strip HTML, then normalize to NFC defensively (the source should be NFC).
-  let text = stripHtml(pointedHebrewString);
-  if (typeof text.normalize === 'function') text = text.normalize('NFC');
-
-  // Split on whitespace, keeping the words only; rejoin on single spaces.
-  const tokens = text.split(/\s+/).filter((t) => t.length > 0);
-  if (tokens.length === 0) return '';
-
-  const outWords = [];
-  for (const token of tokens) {
-    // A token may carry leading or trailing punctuation (maqaf, geresh, quotes).
-    // Separate the Hebrew core from surrounding punctuation so the punctuation
-    // survives into the output and does not derail the per-word rules.
-    const { lead, core, trail } = splitPunctuation(token);
-    if (core.length === 0) {
-      // No Hebrew letters: emit the token as is (a number, a stray mark).
-      outWords.push(token);
-      continue;
-    }
-    // Transliterate every word best-effort, including Aramaic. The Talmud is
-    // mostly Aramaic, which uses the same letters and points, so an inline flag
-    // would litter nearly every line. The global disclaimer by the toggle tells
-    // the reader the aid is a pronunciation guide and is rougher on Aramaic.
-    outWords.push(lead + transliterateWord(core) + trail);
-  }
-
-  return outWords.join(' ');
-}
-
-// Split a token into leading punctuation, the Hebrew-bearing core, and trailing
-// punctuation. The core runs from the first Hebrew letter to the last, including
-// any nikud and inner punctuation. This keeps gershayim and the maqaf visible in
-// the output without feeding them to the letter parser as bases.
 function splitPunctuation(token) {
   const chars = [...token];
   let start = 0;
@@ -605,37 +579,55 @@ function isHebrewLetterOrMark(ch) {
   return code >= 0x0591 && code <= 0x05ea;
 }
 
+// Transliterate a pointed Hebrew string to a Latin pronunciation aid in the
+// chosen scheme (default: academic). Returns '' for empty or non-string input.
+export function transliterate(pointedHebrewString, schemeId = DEFAULT_SCHEME_ID) {
+  if (typeof pointedHebrewString !== 'string') return '';
+  const scheme = getScheme(schemeId);
+
+  let text = stripHtml(pointedHebrewString);
+  if (typeof text.normalize === 'function') text = text.normalize('NFC');
+
+  const tokens = text.split(/\s+/).filter((t) => t.length > 0);
+  if (tokens.length === 0) return '';
+
+  const outWords = [];
+  for (const token of tokens) {
+    const { lead, core, trail } = splitPunctuation(token);
+    if (core.length === 0) {
+      outWords.push(token);
+      continue;
+    }
+    outWords.push(lead + transliterateWord(core, scheme) + trail);
+  }
+
+  return outWords.join(' ');
+}
+
 // ---------------------------------------------------------------------------
-// Unit-style checks, from Section 4 of the scheme.
-//
-// These run as a self-check when this module is executed directly with Node
-// (node src/lib/transliterate.js). They are not imported anywhere; they document
-// the expected output next to the worked examples so the function can be
-// verified. The scheme's 4.1 note allows either meʾeimatai (with the hamza per
-// the general intervocalic rule, which this code emits) or me-eimatai (a
-// readability post-process); this code follows the rule and emits the hamza.
-//
-//   4.1  מֵאֵימָתַי  -> meʾeimatai   (scheme: meʾeimatai per the general rule)
-//   4.2  קוֹרִין      -> korin
-//   4.3  מִצְוָתָן     -> mitsvatan
-//
-// Plus the two seeded kamats-katan words:
-//   כָּל    -> kol
-//   חָכְמָה  -> ḥokhmah
-//
-// To run the checks:  node src/lib/transliterate.js
+// Self-checks, run only when this module is executed directly under Node:
+//   node src/lib/transliterate.js
 // ---------------------------------------------------------------------------
 
 const SELF_TESTS = [
-  { in: 'מֵאֵימָתַי', expect: 'meʾeimatai', label: '4.1 me-eimatai' },
-  { in: 'קוֹרִין', expect: 'korin', label: '4.2 korin' },
-  { in: 'מִצְוָתָן', expect: 'mitsvatan', label: '4.3 mitsvatan' },
-  { in: 'כָּל', expect: 'kol', label: 'kamats katan: kol' },
-  { in: 'חָכְמָה', expect: 'ḥokhmah', label: 'kamats katan: ḥokhmah' },
+  // academic worked examples, Section 4 of docs/TRANSLITERATION-SCHEME.md.
+  { in: 'מֵאֵימָתַי', scheme: 'academic', expect: 'meʾeimatai', label: '4.1 meʾeimatai' },
+  { in: 'קוֹרִין', scheme: 'academic', expect: 'korin', label: '4.2 korin' },
+  { in: 'מִצְוָתָן', scheme: 'academic', expect: 'mitsvatan', label: '4.3 mitsvatan' },
+  { in: 'כָּל', scheme: 'academic', expect: 'kol', label: 'academic kamats katan: kol' },
+  { in: 'חָכְמָה', scheme: 'academic', expect: 'ḥokhmah', label: 'academic kamats katan: ḥokhmah' },
+  // simple: same pronunciation, simpler spelling.
+  { in: 'מִצְוָתָן', scheme: 'simple', expect: 'mitzvatan', label: 'simple: mitzvatan (ts->tz)' },
+  { in: 'כָּל', scheme: 'simple', expect: 'kol', label: 'simple kamats katan: kol' },
+  // ashkenazi: a real second reading.
+  // The bet carries a dagesh chazak, so it geminates (shabbos, not shabos): the
+  // tav without a dagesh becomes s and the kamatz becomes o.
+  { in: 'שַׁבָּת', scheme: 'ashkenazi', expect: 'shabbos', label: 'ashkenazi: shabbos (tav rafe = s, kamatz = o)' },
+  { in: 'תּוֹרָה', scheme: 'ashkenazi', expect: 'toyro', label: 'ashkenazi: toyro (cholam = oy, kamatz = o)' },
+  { in: 'שַׁבָּת', scheme: 'academic', expect: 'shabbat', label: 'academic: shabbat (control)' },
+  { in: 'תּוֹרָה', scheme: 'academic', expect: 'tora', label: 'academic: tora (control)' },
 ];
 
-// Run the self-tests when invoked directly under Node. The guard keeps this
-// inert in the browser build (Vite tree-shakes it; it has no effect on the app).
 if (
   typeof process !== 'undefined' &&
   process.argv &&
@@ -644,7 +636,7 @@ if (
 ) {
   let pass = 0;
   for (const t of SELF_TESTS) {
-    const got = transliterate(t.in);
+    const got = transliterate(t.in, t.scheme);
     const ok = got === t.expect;
     if (ok) pass++;
     // eslint-disable-next-line no-console

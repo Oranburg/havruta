@@ -39,14 +39,16 @@ function isSpace(token) {
   return /^\s+$/.test(token);
 }
 
-// The transliteration of a single word, cached. transliterate is pure and the
-// same words recur all over a daf, so a module-level cache makes the interlinear
-// render cheap even on a long page.
+// The transliteration of a single word in a given scheme, cached. transliterate
+// is pure and the same words recur all over a daf, so a module-level cache makes
+// the interlinear render cheap even on a long page. The cache is keyed by scheme
+// and word so switching schemes does not return a stale romanization.
 const translitCache = new Map();
-function sayWord(word) {
-  if (translitCache.has(word)) return translitCache.get(word);
-  const t = transliterate(word);
-  translitCache.set(word, t);
+function sayWord(word, schemeId) {
+  const key = `${schemeId}|${word}`;
+  if (translitCache.has(key)) return translitCache.get(key);
+  const t = transliterate(word, schemeId);
+  translitCache.set(key, t);
   return t;
 }
 
@@ -67,11 +69,17 @@ function wordHandlers(word, onWordTap) {
   };
 }
 
-function TappableHebrew({ html, fontSize, onWordTap, showTranslit = false }) {
+function TappableHebrew({
+  html,
+  fontSize,
+  onWordTap,
+  showTranslit = false,
+  scheme = 'academic',
+}) {
   const plain = toPlainText(html);
   if (!plain) return null;
 
-  // Interlinear mode: word-over-word transliteration.
+  // Interlinear mode: word-over-word transliteration in the chosen scheme.
   if (showTranslit) {
     const words = plain.split(/\s+/).filter(Boolean);
     const translitSize = Math.max(11, Math.round(fontSize * 0.5));
@@ -91,7 +99,7 @@ function TappableHebrew({ html, fontSize, onWordTap, showTranslit = false }) {
         }}
       >
         {words.map((word, i) => {
-          const t = sayWord(word);
+          const t = sayWord(word, scheme);
           // A real transliteration differs from the source; a punctuation or
           // number token comes back unchanged and gets a blank slot below it so
           // the Hebrew line stays even across the row.

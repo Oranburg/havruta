@@ -4,7 +4,15 @@
 
 This document specifies the deterministic transliteration scheme for the Havruta app's pronunciation-aid feature. The source text is the William Davidson Vocalized Edition from Sefaria, which carries full nikud (vowel points) and dagesh marks. The scheme is Sephardi academic, hybrid form, matching the house convention of the JEW study files. It is designed to be implementable as a rule-based function with one canonical output per input character or character sequence.
 
-The scheme covers Hebrew. Aramaic passages receive a flag rather than a transliteration (see Section 5).
+The scheme covers Hebrew. Aramaic passages get a best-effort transliteration with the disclaimer that the aid is rougher on Aramaic; the engine does not flag them inline, because the daf is mostly Aramaic and a flag on nearly every line would be noise.
+
+**Schemes implemented (as of v0.4.0).** The document below specifies the **academic** scheme, which is the default. The app now offers three schemes through one engine (`src/lib/transliterate.js`), selected by a "Pronunciation guide" dropdown:
+
+- **academic** (this document): Modern Israeli / Sephardi academic, with diacritics (ḥ, ʿ, ts), kamatz = a, tav = t.
+- **simple**: the same pronunciation written without diacritics (ch for ḥet and khaf, tz for tsadi, alef and ayin dropped).
+- **ashkenazi**: Yeshivish Ashkenazi pronunciation, a separate reading: kamatz = o, cholam = oy, tzere = ei, and a tav without a dagesh = s (so Shabbos, boruch, Toyro). Vowels are faithful; syllable stress is not modeled.
+
+A scheme is a configuration the one engine reads, so the structural rules below (shva resolution, dagesh forte, the vav/yod/alef/he rules) are shared; only the output spelling and a few vowel values change. Note the v0.4.0 fix: a vocal shva on a consonantal yod or vav is now sounded (yehuda, not yhuda; the "ve-" prefix, not "v-"), matching the other consonant branches.
 
 ---
 
