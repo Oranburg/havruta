@@ -7,6 +7,7 @@ import {
   Archive as ArchiveIcon,
   Settings as SettingsIcon,
   GraduationCap,
+  Heart,
 } from 'lucide-react';
 
 // Every destination the app can reach lives here. The four core pages also sit
@@ -19,6 +20,7 @@ const DRAWER_ITEMS = [
   { to: '/archive', label: 'Archive', Icon: ArchiveIcon, end: false },
   { to: '/settings', label: 'Settings', Icon: SettingsIcon, end: false },
   { to: '/learn', label: 'How the daf is learned', Icon: GraduationCap, end: false },
+  { to: '/why', label: 'Why this exists', Icon: Heart, end: false },
 ];
 
 // A slide-in navigation drawer opened from the header hamburger. It traps the
