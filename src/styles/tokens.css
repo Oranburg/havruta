@@ -1,0 +1,134 @@
+/* % voice-check: skip */
+
+/*
+  Design tokens for Havruta.
+  Exact values from Seth Oranburg's shipping theme (assets/oranburg-theme.css
+  and the PTS learning companion). See docs/LOOK-AND-FEEL.md, which is the
+  source of truth for visual style. Do not invent a new palette or fonts.
+*/
+
+/* Brand palette, constant across both modes. */
+:root {
+  --blue-deep: #0A3255;
+  --blue-bright: #2459A9;
+  --blue-light: #6DACDE;
+  --red-deep: #B21F2C;
+  --red-bright: #E82F35;
+  --red-light: #E96955;
+  --yellow: #FFD65C;
+  --teal: #B5E1E1;
+
+  /* Fonts. */
+  --font-headline: 'Oswald', sans-serif;
+  --font-body: 'Roboto', sans-serif;
+  --font-accent: 'Crimson Text', serif;
+  --font-mono: 'Roboto Mono', monospace;
+  --font-hebrew: 'Frank Ruhl Libre', 'Noto Serif Hebrew', serif;
+
+  /* Layout, spacing, radius. */
+  --max-width: 1100px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-pill: 999px;
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4rem;
+}
+
+/* Dark mode is the default. */
+:root,
+[data-theme="dark"] {
+  --bg: #000000;
+  --bg-secondary: #0A3255;
+  --bg-soft: #0D3D68;
+  --text: #FFFFFF;
+  --muted: #9CA3AF;
+  --border: #1E5080;
+  --accent: #6DACDE;
+  --accent-2: #B5E1E1;
+  --accent-red: #B21F2C;
+}
+
+/* Light mode. */
+[data-theme="light"] {
+  --bg: #FFFFFF;
+  --bg-secondary: #F8F9FA;
+  --bg-soft: #E9ECEF;
+  --text: #000000;
+  --muted: #555555;
+  --border: #D0D8E4;
+  --accent: #2459A9;
+  --accent-2: #B5E1E1;
+  --accent-red: #B21F2C;
+}
+
+/* Base body styles. Type is set large because the reader is on a phone. */
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 18px;
+  line-height: 1.7;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Headings follow Seth's pattern. */
+h1 {
+  font-family: var(--font-headline);
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1.15;
+  font-size: 2rem;
+  margin: 0 0 var(--space-md);
+}
+
+h2 {
+  font-family: var(--font-headline);
+  font-weight: 700;
+  color: var(--text);
+  border-bottom: 3px solid var(--accent-red);
+  padding-bottom: var(--space-xs);
+  font-size: 1.5rem;
+  margin: var(--space-xl) 0 var(--space-md);
+}
+
+h3 {
+  font-family: var(--font-headline);
+  font-weight: 700;
+  color: var(--blue-light);
+  font-size: 1.2rem;
+  margin: var(--space-lg) 0 var(--space-sm);
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Hebrew and Aramaic render right to left in Hebrew characters. */
+.hebrew {
+  font-family: var(--font-hebrew);
+  direction: rtl;
+  text-align: right;
+}
+
+/* Respect reduced-motion settings. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

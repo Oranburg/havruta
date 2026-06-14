@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Havruta">
+  <rect width="512" height="512" rx="96" fill="#0A3255"/>
+  <!-- Two facing open-book pages: a pair studying one text together. -->
+  <g fill="none" stroke="#FFD65C" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Center spine. -->
+    <line x1="256" y1="150" x2="256" y2="392"/>
+    <!-- Left page (curved outer edge, leaning toward the spine). -->
+    <path d="M256 168 C 196 138, 132 138, 104 160 L 104 372 C 132 350, 196 350, 256 380 Z" fill="#F5F2EC" stroke="#F5F2EC"/>
+    <!-- Right page. -->
+    <path d="M256 168 C 316 138, 380 138, 408 160 L 408 372 C 380 350, 316 350, 256 380 Z" fill="#F5F2EC" stroke="#F5F2EC"/>
+    <!-- Spine drawn over the pages so the open book reads clearly. -->
+    <line x1="256" y1="172" x2="256" y2="380" stroke="#0A3255" stroke-width="16"/>
+    <!-- A few text lines on each page. -->
+    <g stroke="#0A3255" stroke-width="12">
+      <line x1="136" y1="206" x2="232" y2="222"/>
+      <line x1="136" y1="248" x2="232" y2="264"/>
+      <line x1="136" y1="290" x2="232" y2="306"/>
+      <line x1="280" y1="222" x2="376" y2="206"/>
+      <line x1="280" y1="264" x2="376" y2="248"/>
+      <line x1="280" y1="306" x2="376" y2="290"/>
+    </g>
+  </g>
+</svg>

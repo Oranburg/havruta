@@ -1,0 +1,176 @@
+/* % voice-check: skip */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Visually hidden but available to screen readers. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The shell is a flex column: header, scrolling main, fixed bottom nav. */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.app-header__brand {
+  font-family: var(--font-headline);
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+.app-main {
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: var(--space-lg) var(--space-md);
+  /* Leave room above the fixed bottom nav, plus the phone's home indicator. */
+  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px) + var(--space-lg));
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--bg-soft);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  background: var(--bg-secondary);
+}
+
+.icon-button--sm {
+  width: 36px;
+  height: 36px;
+}
+
+/* A pill-shaped action button in the brand style. */
+.pill-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 40px;
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--text);
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+
+.pill-button:hover {
+  background: var(--bg-secondary);
+}
+
+.pill-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pill-button--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #000000;
+}
+
+.pill-button--active:hover {
+  background: var(--accent);
+}
+
+/* Bottom tab bar, thumb-reachable, fixed at the bottom of the viewport. */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  justify-content: space-around;
+  align-items: stretch;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.bottom-nav__item {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 64px;
+  padding: var(--space-sm) var(--space-xs);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-family: var(--font-body);
+  text-decoration: none;
+}
+
+.bottom-nav__item:hover {
+  text-decoration: none;
+}
+
+.bottom-nav__item.is-active {
+  color: var(--accent);
+}
+
+.app-footer {
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: var(--space-lg) var(--space-md);
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* A calm card surface for panels. */
+.card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+}

@@ -1,27 +1,21 @@
 # Build prompts
 
-These are the tasks you hand to GitHub's coding agent, one at a time, in order. Each prompt builds one feature as one pull request. Review and merge each before starting the next, because later prompts assume the earlier ones landed.
+These are large, specific tasks for GitHub's coding agent. Each one builds a whole layer of the app in a single run, because the agent is paid by the prompt and runs deep on each one. The plan they follow is in `docs/ROADMAP.md`.
 
-## How to hand a prompt to the agent
+## The order
 
-Open a new issue in this repository. Paste one prompt file's contents as the issue body. Assign the issue to GitHub Copilot (the coding agent). It opens a pull request that implements the task. Read the pull request, ask for changes in the PR comments if needed, then merge. Move to the next prompt.
+- `A-mvp-partner-and-login.md` builds the MVP: secure Google sign-in restricted to the owner, the server proxy that holds the Claude key, the streaming study partner, and the saved record. After this, the owner can study daily.
+- `B-study-depth.md` adds the calibration dial, the classic commentaries next to the page, Sefaria's connections, and a partner that teaches in the reader's language.
+- `C-record-and-platform.md` adds the whole-Shas progress map, export, full offline and install and accessibility, and a bring-your-own-key mode for other people.
 
-Every prompt assumes the agent has read the `docs/` folder first. The first line of each prompt says which docs matter for that task. The docs are the source of truth; when a prompt is silent on a detail, the docs decide it, and `docs/CONSTITUTION.md` overrides everything when there is a conflict.
+Phase 0, the running foundation (the app shell, the design system, the Sefaria reading, the page image, the human-acts-first gate), is already built into the repository. These prompts extend it.
 
-## The order and what each one adds
+Phase 3 (studying together: accounts, sync, study rooms, line-anchored discussion) and Phase 4 (native apps and scale) get their own prompts when those phases arrive, because each needs design choices best made once the core is proven. See `docs/ROADMAP.md` for the full backlog.
 
-1. `01-scaffold.md` sets up the React and Vite Progressive Web App and the Vercel deploy.
-2. `02-daf-text.md` loads and shows the day's daf text from Sefaria.
-3. `03-visual-daf.md` adds the classic Vilna page image with zoom.
-4. `04-study-flow.md` builds the study screen and the rule that you write your reading before the partner is reachable.
-5. `05-auth.md` adds Google sign-in restricted to the owner.
-6. `06-partner-engine.md` adds the server proxy and the challenging study partner.
-7. `07-session-record.md` saves every session on the device and exports it.
-8. `08-shas-progress.md` tracks the march through the whole Talmud.
-9. `09-calibration.md` adds the dial that sets how hard the partner pushes.
-10. `10-bring-your-own-key.md` lets other people use the app with their own key (a bonus, not the goal).
-11. `11-pwa-polish.md` finishes offline use, install, accessibility, and large type.
+## How a build runs
 
-## A standing rule for every prompt
+The owner hands one prompt to the coding agent (paste it as a GitHub issue and assign the agent, or open it in the agent's workspace). The agent reads the `docs/` folder first, then builds the feature as a pull request. The architect reviews the pull request, and the agent supports back-and-forth, so the architect can steer it before anything merges. When the pull request is right, the owner merges it. Then the next prompt.
 
-The app never invents sacred text. All Talmud, Bible, and commentary text and all page images come from Sefaria at runtime. The partner quotes only the text it was handed. This is the whole point of the project and it is not negotiable in any feature.
+## The standing rules every prompt obeys
+
+The app never invents sacred text; all Talmud, Bible, and commentary text and all page images come from Sefaria at runtime, shown verbatim with attribution. The human acts first; the reader writes their own reading before the partner speaks. The owner's Claude credits are protected; the public can read freely or bring their own key, but cannot spend the owner's credits. Every word the user sees follows `docs/VOICE.md`, and the look follows `docs/LOOK-AND-FEEL.md`. `docs/CONSTITUTION.md` overrides on any conflict.

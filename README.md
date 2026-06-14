@@ -12,7 +12,7 @@ A mobile-first web app (a Progressive Web App you can install on your phone and 
 2. The actual page image, the classic Vilna tzurat hadaf, supplied by Sefaria.
 3. A study partner that challenges your reading instead of handing you an answer.
 
-You can do all of it from your phone, away from a laptop. The partner runs on the Claude API called from inside the app, using your own Anthropic key stored on your device. There is no Claude Code, Cowork, or terminal in the loop.
+You can do all of it from your phone, away from a laptop. The partner runs on the Claude API from inside the app. The owner signs in with Google, and a small server holds the Anthropic key so the owner's credits are protected and the public cannot spend them. Reading the daf and the page needs no sign-in, because that content is free from Sefaria. Anyone else who wants the partner can bring their own Anthropic key and pay their own way.
 
 ## Why it is built this way
 
@@ -22,13 +22,21 @@ The design rules the partner follows are written down in `docs/CONSTITUTION.md`.
 
 ## How the repository is organized
 
-The human work (architecture, the partner's behavior, the verified data sources, the voice) lives in `docs/`. The build work is delegated. `prompts/` holds a numbered sequence of self-contained build tasks written for GitHub's coding agent. You hand the agent one prompt at a time; it opens a pull request that builds that feature against the docs. Read `prompts/README.md` for the order and the handoff.
+The running app lives at the repository root: a React and Vite Progressive Web App with the foundation already built (the shell, the design system, the Sefaria reading, the page image, the human-acts-first gate). The plan and the specifications live in `docs/`. The build tasks for the rest live in `prompts/`, as large prompts for GitHub's coding agent. The owner hands the agent one prompt at a time; the architect reviews the pull request and steers the agent before it merges. Read `prompts/README.md` for the order and the handoff, and `docs/ROADMAP.md` for the phases.
 
+- `docs/VISION.md` is what the project is and the long shape it grows toward.
+- `docs/ROADMAP.md` is the MVP, the phases, and the full feature backlog, mapped to the prompts.
 - `docs/CONSTITUTION.md` is the partner's behavioral contract, sourced to Chapter 13.
-- `docs/ARCHITECTURE.md` is the stack decision and the mobile and deploy constraints.
+- `docs/ARCHITECTURE.md` is the stack, the mobile and deploy constraints, and the authentication and credit-protection design.
 - `docs/SOURCES.md` is every Sefaria endpoint, verified, with the daf yomi scope and the Hebrew display rules.
-- `docs/PARTNER-PROMPT.md` is the system prompt for the challenge engine, ready to drop into the Claude API call.
+- `docs/PARTNER-PROMPT.md` is the system prompt for the partner, ready to drop into the Claude API call.
+- `docs/LOOK-AND-FEEL.md` is the design system: the exact tokens, fonts, and dark-mode toggle from the owner's other apps.
+- `docs/LICENSING.md` is Sefaria's terms, the attribution and credits, and the non-commercial caveat.
 - `docs/VOICE.md` is the voice every line of generated and interface prose must follow.
+
+## Run it locally
+
+Install with `npm install`, run with `npm run dev`, build with `npm run build`. See `DEPLOY.md` for deploying to Vercel and the environment variables the partner needs.
 
 ## A note on privacy
 
