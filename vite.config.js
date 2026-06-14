@@ -2,9 +2,10 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
-// Deployed at the domain root (Vercel). Uses HashRouter, so no SPA rewrite is needed.
+// Deployed on GitHub Pages under the /havruta/ subpath. Uses HashRouter, so deep links
+// resolve client-side and no SPA 404 rewrite is needed.
 export default defineConfig({
-  base: '/',
+  base: '/havruta/',
   plugins: [
     react(),
     VitePWA({
@@ -17,8 +18,8 @@ export default defineConfig({
         theme_color: '#0A3255',
         background_color: '#000000',
         display: 'standalone',
-        start_url: '/',
-        scope: '/',
+        start_url: '/havruta/',
+        scope: '/havruta/',
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
