@@ -82,7 +82,7 @@ function TappableHebrew({ html, fontSize, onWordTap, showTranslit = false }) {
         style={{
           display: 'flex',
           flexWrap: 'wrap',
-          alignItems: 'flex-end',
+          alignItems: 'flex-start',
           rowGap: '0.4em',
           columnGap: '0.5em',
           fontSize: `${fontSize}px`,
@@ -93,8 +93,8 @@ function TappableHebrew({ html, fontSize, onWordTap, showTranslit = false }) {
         {words.map((word, i) => {
           const t = sayWord(word);
           // A real transliteration differs from the source; a punctuation or
-          // number token comes back unchanged and gets a blank slot above it so
-          // the Hebrew baseline stays even across the line.
+          // number token comes back unchanged and gets a blank slot below it so
+          // the Hebrew line stays even across the row.
           const hasT = Boolean(t) && t !== word;
           return (
             <span
@@ -105,6 +105,7 @@ function TappableHebrew({ html, fontSize, onWordTap, showTranslit = false }) {
                 alignItems: 'center',
               }}
             >
+              <span {...wordHandlers(word, onWordTap)}>{word}</span>
               <span
                 dir="ltr"
                 aria-hidden="true"
@@ -118,7 +119,6 @@ function TappableHebrew({ html, fontSize, onWordTap, showTranslit = false }) {
               >
                 {hasT ? t : ' '}
               </span>
-              <span {...wordHandlers(word, onWordTap)}>{word}</span>
             </span>
           );
         })}
