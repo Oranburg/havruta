@@ -599,10 +599,10 @@ export function transliterate(pointedHebrewString) {
       outWords.push(token);
       continue;
     }
-    if (looksAramaic(core)) {
-      outWords.push(lead + ARAMAIC_FLAG + trail);
-      continue;
-    }
+    // Transliterate every word best-effort, including Aramaic. The Talmud is
+    // mostly Aramaic, which uses the same letters and points, so an inline flag
+    // would litter nearly every line. The global disclaimer by the toggle tells
+    // the reader the aid is a pronunciation guide and is rougher on Aramaic.
     outWords.push(lead + transliterateWord(core) + trail);
   }
 
