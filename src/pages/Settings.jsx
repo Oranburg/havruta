@@ -8,6 +8,53 @@ import {
   DEFAULT_LEVEL,
 } from '../lib/partner.js';
 
+// The calibration dial. Friction is matched to capacity (docs/CONSTITUTION.md
+// requirement 4). Each step stores a descriptive level string that reads well
+// where the partner prompt drops it into "The owner has set the challenge level
+// to: {{LEVEL}}." The prompt already tells the partner to slow down and add a
+// foothold at a lower level and to withhold scaffolding and press harder at a
+// higher one, so each string describes the reader and the push, and at every
+// step the reader stays the one who decides what the page means. The middle step
+// is the default, the curious amateur. Ordered gentler to harder.
+const LEVELS = [
+  {
+    name: 'Gentle',
+    blurb: 'One more foothold, a slower pace. Good for a hard daf.',
+    value:
+      'an interested amateur who is new to the page and wants to be met gently. Give one more foothold than usual, slow down, and take one step at a time. Keep the reader the one who decides what the page means.',
+  },
+  {
+    name: 'Easing in',
+    blurb: 'A little more help than the middle setting.',
+    value:
+      'an interested amateur who knows the alphabet and looks things up, and who wants a bit more help. Offer a small foothold before you press, and keep the challenge to one point at a time.',
+  },
+  {
+    name: 'Curious amateur',
+    blurb: 'The default. Reads parsha, knows the alphabet, looks things up.',
+    value: DEFAULT_LEVEL,
+  },
+  {
+    name: 'Pushing',
+    blurb: 'Less scaffolding, sharper challenges.',
+    value:
+      'a capable reader who wants to be pushed. Withhold the easy foothold, press on the weakest step in the reading, and raise the next layer rather than settling the point.',
+  },
+  {
+    name: 'Hard',
+    blurb: 'Minimal scaffolding, the hardest press.',
+    value:
+      'a strong reader who wants the hardest study. Withhold scaffolding, press hard on the line that was passed over and the step that was assumed, and keep raising the counter-text until the reading has to answer for all of it. The reader still decides what the page means.',
+  },
+];
+
+// Match a stored level string back to a dial step. An unrecognized value (an
+// older or hand-set string) lands on the default step without losing the value.
+function indexForLevel(value) {
+  const found = LEVELS.findIndex((l) => l.value === value);
+  return found === -1 ? 2 : found;
+}
+
 const inputStyle = {
   width: '100%',
   padding: 'var(--space-md)',
@@ -30,6 +77,7 @@ const labelStyle = {
 export default function Settings() {
   const [apiKey, setApiKey] = useState('');
   const [model, setModel] = useState(DEFAULT_MODEL);
+  const [levelIndex, setLevelIndex] = useState(2);
   const [savedFlash, setSavedFlash] = useState('');
 
   // Load current values from localStorage on mount.
@@ -37,6 +85,8 @@ export default function Settings() {
     try {
       setApiKey(localStorage.getItem(KEY_STORAGE) || '');
       setModel(localStorage.getItem(MODEL_STORAGE) || DEFAULT_MODEL);
+      const savedLevel = localStorage.getItem(LEVEL_STORAGE);
+      setLevelIndex(savedLevel ? indexForLevel(savedLevel) : 2);
     } catch {
       // localStorage unavailable; keep defaults.
     }
@@ -78,6 +128,18 @@ export default function Settings() {
       flash('Model saved.');
     } catch {
       flash('This browser would not let the app save the model.');
+    }
+  }
+
+  // The dial saves the moment the reader picks a step, so it can be changed any
+  // time and the partner reads the new level on its next exchange.
+  function pickLevel(index) {
+    setLevelIndex(index);
+    try {
+      localStorage.setItem(LEVEL_STORAGE, LEVELS[index].value);
+      flash(`Challenge set to ${LEVELS[index].name.toLowerCase()}.`);
+    } catch {
+      flash('This browser would not let the app save the setting.');
     }
   }
 
@@ -154,6 +216,50 @@ export default function Settings() {
           This is the Claude model the partner uses. The default is{' '}
           <code style={{ fontFamily: 'var(--font-mono)' }}>{DEFAULT_MODEL}</code>
           . You can change it to another Claude model your key can reach.
+        </p>
+      </div>
+
+      <h2>How hard the partner pushes</h2>
+      <div className="card">
+        <p style={{ marginTop: 0 }}>
+          The partner matches its challenge to you. Set how much it leans on you
+          and how much it helps. A gentler setting adds a foothold and slows
+          down; a harder setting pulls the scaffolding away and presses on the
+          weak step. You decide what the page means at every setting.
+        </p>
+        <div
+          role="group"
+          aria-label="Challenge level"
+          style={{
+            display: 'flex',
+            gap: 'var(--space-xs)',
+            flexWrap: 'wrap',
+            marginTop: 'var(--space-md)',
+          }}
+        >
+          {LEVELS.map((level, i) => (
+            <button
+              key={level.name}
+              type="button"
+              className={
+                i === levelIndex
+                  ? 'pill-button pill-button--active'
+                  : 'pill-button'
+              }
+              aria-pressed={i === levelIndex}
+              onClick={() => pickLevel(i)}
+            >
+              {level.name}
+            </button>
+          ))}
+        </div>
+        <p
+          style={{
+            margin: 'var(--space-md) 0 0',
+            color: 'var(--muted)',
+          }}
+        >
+          {LEVELS[levelIndex].blurb}
         </p>
       </div>
 

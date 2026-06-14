@@ -14,6 +14,7 @@ import Shas from './pages/Shas.jsx';
 import Archive from './pages/Archive.jsx';
 import Settings from './pages/Settings.jsx';
 import NotFound from './pages/NotFound.jsx';
+import InstallPrompt from './components/InstallPrompt.jsx';
 
 const THEME_KEY = 'havruta-theme';
 
@@ -110,6 +111,7 @@ export default function App() {
           </Routes>
           <Footer />
         </main>
+        <InstallPrompt />
         <BottomNav />
       </div>
     </HashRouter>

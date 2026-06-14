@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   ChevronLeft,
   ChevronRight,
@@ -28,16 +28,53 @@ const HE_MAX = 40;
 const EN_MIN = 14;
 const EN_MAX = 28;
 
+// Reading preferences persist across visits, so the reader does not reset the
+// view and the type sizes every day. The large defaults below hold when nothing
+// is saved.
+const VIEW_STORAGE = 'havruta-view';
+const HE_SIZE_STORAGE = 'havruta-he-size';
+const EN_SIZE_STORAGE = 'havruta-en-size';
+const DEFAULT_VIEW = 'both';
+const DEFAULT_HE_SIZE = 26;
+const DEFAULT_EN_SIZE = 18;
+
+// Read a saved view, falling back to the default when nothing valid is stored.
+function readSavedView() {
+  try {
+    const saved = localStorage.getItem(VIEW_STORAGE);
+    if (VIEWS.some((v) => v.id === saved)) return saved;
+  } catch {
+    // localStorage unavailable; use the default.
+  }
+  return DEFAULT_VIEW;
+}
+
+// Read a saved font size, clamped to its range, falling back to the default.
+function readSavedSize(storageKey, fallback, min, max) {
+  try {
+    const saved = Number(localStorage.getItem(storageKey));
+    if (Number.isFinite(saved) && saved >= min && saved <= max) return saved;
+  } catch {
+    // localStorage unavailable; use the default.
+  }
+  return fallback;
+}
+
 export default function Today() {
+  const location = useLocation();
   const [daf, setDaf] = useState(null);
   const [text, setText] = useState(null);
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const [view, setView] = useState('both');
-  const [heSize, setHeSize] = useState(26);
-  const [enSize, setEnSize] = useState(18);
+  const [view, setView] = useState(readSavedView);
+  const [heSize, setHeSize] = useState(() =>
+    readSavedSize(HE_SIZE_STORAGE, DEFAULT_HE_SIZE, HE_MIN, HE_MAX)
+  );
+  const [enSize, setEnSize] = useState(() =>
+    readSavedSize(EN_SIZE_STORAGE, DEFAULT_EN_SIZE, EN_MIN, EN_MAX)
+  );
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   // The human-acts-first gate. The partner stays locked until the reader
@@ -74,9 +111,39 @@ export default function Today() {
     }
   }, []);
 
+  // Load today's daf by default, or a specific daf when the Shas map links here
+  // with ?daf=Tractate%20Number. Reload when that param changes so tapping a
+  // different daf in the map reloads this page at it.
+  const dafParam = new URLSearchParams(location.search).get('daf');
   useEffect(() => {
-    load(null);
-  }, [load]);
+    load(dafParam || null);
+  }, [load, dafParam]);
+
+  // Persist the reading preferences as they change, so the next visit opens with
+  // the same view and type sizes.
+  useEffect(() => {
+    try {
+      localStorage.setItem(VIEW_STORAGE, view);
+    } catch {
+      // localStorage unavailable; the choice holds for this visit only.
+    }
+  }, [view]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(HE_SIZE_STORAGE, String(heSize));
+    } catch {
+      // localStorage unavailable; the choice holds for this visit only.
+    }
+  }, [heSize]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(EN_SIZE_STORAGE, String(enSize));
+    } catch {
+      // localStorage unavailable; the choice holds for this visit only.
+    }
+  }, [enSize]);
 
   // The next/prev daf refs come from amud b's next and amud a's prev so we
   // step a whole daf at a time. Sefaria returns amud-level refs, so we read

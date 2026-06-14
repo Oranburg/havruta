@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { ChevronLeft, Trash2, Search } from 'lucide-react';
 import { listSessions, deleteSession } from '../lib/sessions.js';
 
@@ -39,6 +40,17 @@ export default function Archive() {
   const [sessions, setSessions] = useState(() => listSessions());
   const [openId, setOpenId] = useState(null);
   const [query, setQuery] = useState('');
+  const location = useLocation();
+
+  // The Shas map deep-links a studied daf to its saved session with ?session=id.
+  // Open that session when the param names one we hold.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const wanted = params.get('session');
+    if (wanted && sessions.some((s) => s.id === wanted)) {
+      setOpenId(wanted);
+    }
+  }, [location.search, sessions]);
 
   const open = openId ? sessions.find((s) => s.id === openId) : null;
 
