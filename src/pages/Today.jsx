@@ -18,6 +18,7 @@ import {
   sefariaUrl,
 } from '../lib/sefaria.js';
 import { readProviderSettings } from '../lib/partner.js';
+import { transliterate } from '../lib/transliterate.js';
 import Havruta from '../components/Havruta.jsx';
 import Commentaries from '../components/Commentaries.jsx';
 import Connections from '../components/Connections.jsx';
@@ -46,9 +47,15 @@ const EN_MAX = 28;
 const VIEW_STORAGE = 'havruta-view';
 const HE_SIZE_STORAGE = 'havruta-he-size';
 const EN_SIZE_STORAGE = 'havruta-en-size';
+const TRANSLIT_STORAGE = 'havruta-translit';
 const DEFAULT_VIEW = 'both';
 const DEFAULT_HE_SIZE = 26;
 const DEFAULT_EN_SIZE = 18;
+
+// The one-line disclaimer from the transliteration scheme, Section 5.7. It sits
+// by the toggle so a reader knows the romanization is a guide, not authority.
+const TRANSLIT_DISCLAIMER =
+  'Transliteration is a pronunciation guide following Sephardi academic convention. It is not authoritative and cannot fully represent Aramaic passages.';
 
 // Read a saved view, falling back to the default when nothing valid is stored.
 function readSavedView() {
@@ -59,6 +66,16 @@ function readSavedView() {
     // localStorage unavailable; use the default.
   }
   return DEFAULT_VIEW;
+}
+
+// Read the saved transliteration preference, defaulting to off.
+function readSavedTranslit() {
+  try {
+    return localStorage.getItem(TRANSLIT_STORAGE) === 'on';
+  } catch {
+    // localStorage unavailable; default off.
+  }
+  return false;
 }
 
 // Read a saved font size, clamped to its range, falling back to the default.
@@ -87,6 +104,7 @@ export default function Today() {
   const [enSize, setEnSize] = useState(() =>
     readSavedSize(EN_SIZE_STORAGE, DEFAULT_EN_SIZE, EN_MIN, EN_MAX)
   );
+  const [showTranslit, setShowTranslit] = useState(readSavedTranslit);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   // One word-lookup popover is open at a time across both amudim. The Amud
@@ -167,6 +185,14 @@ export default function Today() {
       // localStorage unavailable; the choice holds for this visit only.
     }
   }, [enSize]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(TRANSLIT_STORAGE, showTranslit ? 'on' : 'off');
+    } catch {
+      // localStorage unavailable; the choice holds for this visit only.
+    }
+  }, [showTranslit]);
 
   // The next/prev daf refs come from amud b's next and amud a's prev so we
   // step a whole daf at a time. Sefaria returns amud-level refs, so we read
@@ -252,6 +278,8 @@ export default function Today() {
         setHeSize={setHeSize}
         enSize={enSize}
         setEnSize={setEnSize}
+        showTranslit={showTranslit}
+        setShowTranslit={setShowTranslit}
       />
 
       {text && (
@@ -263,6 +291,7 @@ export default function Today() {
             view={view}
             heSize={heSize}
             enSize={enSize}
+            showTranslit={showTranslit}
             onWordTap={openWord}
           />
           <Amud
@@ -272,6 +301,7 @@ export default function Today() {
             view={view}
             heSize={heSize}
             enSize={enSize}
+            showTranslit={showTranslit}
             onWordTap={openWord}
           />
         </>
@@ -451,7 +481,16 @@ function DafNav({ prevDaf, nextDaf, onGo }) {
   );
 }
 
-function Controls({ view, setView, heSize, setHeSize, enSize, setEnSize }) {
+function Controls({
+  view,
+  setView,
+  heSize,
+  setHeSize,
+  enSize,
+  setEnSize,
+  showTranslit,
+  setShowTranslit,
+}) {
   const step = (set, value, delta, min, max) =>
     set(Math.min(max, Math.max(min, value + delta)));
 
@@ -495,6 +534,33 @@ function Controls({ view, setView, heSize, setHeSize, enSize, setEnSize }) {
           onMinus={() => step(setEnSize, enSize, -1, EN_MIN, EN_MAX)}
           onPlus={() => step(setEnSize, enSize, 1, EN_MIN, EN_MAX)}
         />
+      </div>
+
+      <div style={{ marginTop: 'var(--space-md)' }}>
+        <button
+          type="button"
+          className={
+            showTranslit
+              ? 'pill-button pill-button--active'
+              : 'pill-button'
+          }
+          aria-pressed={showTranslit}
+          onClick={() => setShowTranslit(!showTranslit)}
+        >
+          Show transliteration
+        </button>
+        {showTranslit && (
+          <p
+            style={{
+              color: 'var(--muted)',
+              fontSize: '0.85rem',
+              lineHeight: 1.5,
+              margin: 'var(--space-sm) 0 0',
+            }}
+          >
+            {TRANSLIT_DISCLAIMER}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -782,7 +848,16 @@ function Lightbox({ image, onClose }) {
   );
 }
 
-function Amud({ label, amudName, amud, view, heSize, enSize, onWordTap }) {
+function Amud({
+  label,
+  amudName,
+  amud,
+  view,
+  heSize,
+  enSize,
+  showTranslit,
+  onWordTap,
+}) {
   const count = Math.max(amud.he.length, amud.en.length);
   const segments = Array.from({ length: count }, (_, i) => i);
 
@@ -821,6 +896,9 @@ function Amud({ label, amudName, amud, view, heSize, enSize, onWordTap }) {
               {(view === 'both' || view === 'hebrew') && he && (
                 <TappableHebrew html={he} fontSize={heSize} onWordTap={onWordTap} />
               )}
+              {(view === 'both' || view === 'hebrew') && he && showTranslit && (
+                <TranslitLine he={he} heSize={heSize} />
+              )}
               {(view === 'both' || view === 'english') && en && (
                 <p
                   style={{
@@ -846,6 +924,33 @@ function Amud({ label, amudName, amud, view, heSize, enSize, onWordTap }) {
         })}
       </ol>
     </section>
+  );
+}
+
+// The transliteration line under a Hebrew segment. It runs the segment's Hebrew
+// through the rule-based transliterator and shows the Latin result as a quiet,
+// read-only pronunciation aid: smaller than the Hebrew, muted, left to right.
+// The Hebrew itself stays right to left and tappable; this is a separate line
+// beneath it. Sized as a fraction of the Hebrew size so growing the Hebrew grows
+// this in step, with a floor so it stays legible.
+function TranslitLine({ he, heSize }) {
+  const latin = transliterate(he);
+  if (!latin) return null;
+  const size = Math.max(14, Math.round(heSize * 0.6));
+  return (
+    <p
+      dir="ltr"
+      style={{
+        fontFamily: 'var(--font-body)',
+        fontSize: `${size}px`,
+        lineHeight: 1.6,
+        color: 'var(--muted)',
+        margin: 'var(--space-xs) 0 0',
+        textAlign: 'left',
+      }}
+    >
+      {latin}
+    </p>
   );
 }
 
