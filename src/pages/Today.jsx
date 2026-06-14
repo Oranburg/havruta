@@ -1,6 +1,18 @@
 import { useEffect, useState, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, Minus, Plus, X, Lock } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Minus,
+  Plus,
+  X,
+  Lock,
+  MessageSquare,
+  ArrowDown,
+} from 'lucide-react';
 import { getTodaysDaf, getDafText, getDafImages } from '../lib/sefaria.js';
+import { KEY_STORAGE } from '../lib/partner.js';
+import Havruta from '../components/Havruta.jsx';
 
 // Reading views the toggle offers.
 const VIEWS = [
@@ -118,6 +130,8 @@ export default function Today() {
     <section>
       <Header daf={daf} />
 
+      <PartnerIntro submitted={readingSubmitted} />
+
       <DafNav prevDaf={prevDaf} nextDaf={nextDaf} onGo={load} />
 
       <Controls
@@ -161,6 +175,8 @@ export default function Today() {
         setReading={setReading}
         submitted={readingSubmitted}
         onSubmit={submitReading}
+        daf={daf}
+        text={text}
       />
 
       {lightboxOpen && images.length > 0 && (
@@ -183,6 +199,76 @@ function Header({ daf }) {
         </p>
       )}
     </header>
+  );
+}
+
+function hasSavedKey() {
+  try {
+    return Boolean(localStorage.getItem(KEY_STORAGE));
+  } catch {
+    return false;
+  }
+}
+
+function scrollToReading() {
+  const el = document.getElementById('reading');
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.focus({ preventScroll: true });
+  }
+}
+
+// Makes the study partner obvious from the first look. With no key saved it
+// invites the one setup step; with a key it points the reader to write first.
+function PartnerIntro({ submitted }) {
+  const [keyed] = useState(hasSavedKey);
+
+  if (submitted) return null;
+
+  if (!keyed) {
+    return (
+      <div
+        className="card"
+        style={{
+          marginBottom: 'var(--space-lg)',
+          borderColor: 'var(--accent)',
+        }}
+      >
+        <h2
+          style={{
+            marginTop: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            borderBottom: 'none',
+            paddingBottom: 0,
+          }}
+        >
+          <MessageSquare size={22} aria-hidden="true" />
+          Study with your havruta
+        </h2>
+        <p style={{ margin: '0 0 var(--space-md)' }}>
+          This page has a study partner that challenges your reading instead of
+          explaining the daf. It runs on Claude with your own Anthropic key, kept
+          only on this device. Add your key once to begin.
+        </p>
+        <Link to="/settings" className="pill-button pill-button--active">
+          Add your key in Settings
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card" style={{ marginBottom: 'var(--space-lg)' }}>
+      <p style={{ margin: '0 0 var(--space-sm)' }}>
+        Read the page, then write your own reading. Your havruta challenges what
+        you wrote; it does not hand you the answer.
+      </p>
+      <button type="button" className="pill-button" onClick={scrollToReading}>
+        <ArrowDown size={18} /> Write my reading
+      </button>
+    </div>
   );
 }
 
@@ -442,7 +528,7 @@ function Amud({ label, amudName, amud, view, heSize, enSize }) {
   );
 }
 
-function ReadingGate({ reading, setReading, submitted, onSubmit }) {
+function ReadingGate({ reading, setReading, submitted, onSubmit, daf, text }) {
   return (
     <section style={{ marginTop: 'var(--space-2xl)' }}>
       <h2>Your reading comes first</h2>
@@ -462,6 +548,7 @@ function ReadingGate({ reading, setReading, submitted, onSubmit }) {
         onChange={(e) => setReading(e.target.value)}
         placeholder="What do you make of this page? Write your reading, a question it raises, or your best attempt to say what it means."
         rows={6}
+        readOnly={submitted}
         style={{
           width: '100%',
           padding: 'var(--space-md)',
@@ -473,42 +560,37 @@ function ReadingGate({ reading, setReading, submitted, onSubmit }) {
           border: '1px solid var(--border)',
           borderRadius: 'var(--radius-md)',
           resize: 'vertical',
+          opacity: submitted ? 0.7 : 1,
         }}
       />
-      <div style={{ marginTop: 'var(--space-sm)' }}>
-        <button
-          type="button"
-          className="pill-button pill-button--active"
-          onClick={onSubmit}
-          disabled={reading.trim().length === 0}
-        >
-          Submit my reading
-        </button>
-      </div>
+      {!submitted && (
+        <div style={{ marginTop: 'var(--space-sm)' }}>
+          <button
+            type="button"
+            className="pill-button pill-button--active"
+            onClick={onSubmit}
+            disabled={reading.trim().length === 0}
+          >
+            Submit my reading
+          </button>
+        </div>
+      )}
 
-      <div
-        className="card"
-        style={{ marginTop: 'var(--space-lg)', opacity: submitted ? 1 : 0.6 }}
-        aria-disabled={!submitted}
-      >
-        <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          {!submitted && <Lock size={18} aria-hidden="true" />}
-          Your havruta
-        </h3>
-        {submitted ? (
-          <p style={{ margin: 0, color: 'var(--muted)' }}>
-            Your reading is saved for this session. The study partner connects
-            in a later version of the app. When it does, it will challenge the
-            reading you just wrote rather than replace it.
-          </p>
-        ) : (
+      {submitted ? (
+        <Havruta daf={daf} text={text} reading={reading} />
+      ) : (
+        <div className="card" style={{ marginTop: 'var(--space-lg)', opacity: 0.6 }} aria-disabled="true">
+          <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <Lock size={18} aria-hidden="true" />
+            Your havruta
+          </h3>
           <p style={{ margin: 0, color: 'var(--muted)' }}>
             This panel stays locked until you write your own reading above and
-            submit it. The partner unlocks only after you have committed a
-            reading of your own.
+            submit it. The partner becomes reachable only after you have
+            committed a reading of your own.
           </p>
-        )}
-      </div>
+        </div>
+      )}
     </section>
   );
 }
