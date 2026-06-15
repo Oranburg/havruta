@@ -17,7 +17,6 @@ import {
   sefariaUrl,
 } from '../lib/sefaria.js';
 import { readProviderSettings } from '../lib/partner.js';
-import { TRANSLIT_SCHEMES, DEFAULT_SCHEME_ID } from '../lib/transliterate.js';
 import Havruta from '../components/Havruta.jsx';
 import LineHavruta from '../components/LineHavruta.jsx';
 import Commentaries from '../components/Commentaries.jsx';
@@ -47,23 +46,15 @@ const EN_MAX = 28;
 const VIEW_STORAGE = 'havruta-view';
 const HE_SIZE_STORAGE = 'havruta-he-size';
 const EN_SIZE_STORAGE = 'havruta-en-size';
-// The transliteration scheme the reader picks, stored by scheme id. 'none' is
-// off. A line taken up still shows transliteration in the fallback scheme below
-// even when this is 'none'.
-const TRANSLIT_STORAGE = 'havruta-translit-scheme';
-const TRANSLIT_NONE = 'none';
-const TRANSLIT_FALLBACK = DEFAULT_SCHEME_ID; // used for a taken-up line when off
+const TRANSLIT_STORAGE = 'havruta-translit';
 const DEFAULT_VIEW = 'both';
 const DEFAULT_HE_SIZE = 26;
 const DEFAULT_EN_SIZE = 18;
 
-// The valid scheme ids the dropdown can store, plus 'none'.
-const TRANSLIT_IDS = new Set([TRANSLIT_NONE, ...TRANSLIT_SCHEMES.map((s) => s.id)]);
-
-// The one-line disclaimer. It sits by the dropdown so a reader knows the
-// romanization is a guide, not authority, and that traditions differ.
+// The one-line disclaimer. It sits by the toggle so a reader knows the
+// romanization is a guide, not authority.
 const TRANSLIT_DISCLAIMER =
-  'Transliteration is a pronunciation guide, not authority. Traditions pronounce Hebrew differently, so pick the one you read by. It is rougher on Aramaic.';
+  'Transliteration follows the Shofar magazine chart for the consonants. It is a pronunciation guide, not authority, and is rougher on Aramaic.';
 
 // Read a saved view, falling back to the default when nothing valid is stored.
 function readSavedView() {
@@ -76,19 +67,19 @@ function readSavedView() {
   return DEFAULT_VIEW;
 }
 
-// Read the saved transliteration scheme, defaulting to off ('none'). Migrates
-// the old boolean key ('on' meant the academic scheme).
-function readSavedTranslitScheme() {
+// Read the saved transliteration preference, defaulting to off. The earlier
+// scheme key counts as on for anything other than 'none'.
+function readSavedTranslit() {
   try {
-    const saved = localStorage.getItem(TRANSLIT_STORAGE);
-    if (saved && TRANSLIT_IDS.has(saved)) return saved;
-    // Migrate the old on/off key.
-    const legacy = localStorage.getItem('havruta-translit');
-    if (legacy === 'on') return DEFAULT_SCHEME_ID;
+    const v = localStorage.getItem(TRANSLIT_STORAGE);
+    if (v === 'on') return true;
+    if (v === 'off' || v === null) return false;
+    // A leftover scheme id from the dropdown build: anything but 'none' is on.
+    return v !== 'none';
   } catch {
     // localStorage unavailable; default off.
   }
-  return TRANSLIT_NONE;
+  return false;
 }
 
 // Read a saved font size, clamped to its range, falling back to the default.
@@ -117,7 +108,7 @@ export default function Today() {
   const [enSize, setEnSize] = useState(() =>
     readSavedSize(EN_SIZE_STORAGE, DEFAULT_EN_SIZE, EN_MIN, EN_MAX)
   );
-  const [translitScheme, setTranslitScheme] = useState(readSavedTranslitScheme);
+  const [showTranslit, setShowTranslit] = useState(readSavedTranslit);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   // One word-lookup popover is open at a time across both amudim. The Amud
@@ -201,11 +192,11 @@ export default function Today() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(TRANSLIT_STORAGE, translitScheme);
+      localStorage.setItem(TRANSLIT_STORAGE, showTranslit ? 'on' : 'off');
     } catch {
       // localStorage unavailable; the choice holds for this visit only.
     }
-  }, [translitScheme]);
+  }, [showTranslit]);
 
   // The next/prev daf refs come from amud b's next and amud a's prev so we
   // step a whole daf at a time. Sefaria returns amud-level refs, so we read
@@ -291,8 +282,8 @@ export default function Today() {
         setHeSize={setHeSize}
         enSize={enSize}
         setEnSize={setEnSize}
-        translitScheme={translitScheme}
-        setTranslitScheme={setTranslitScheme}
+        showTranslit={showTranslit}
+        setShowTranslit={setShowTranslit}
       />
 
       {text && (
@@ -304,7 +295,7 @@ export default function Today() {
             view={view}
             heSize={heSize}
             enSize={enSize}
-            translitScheme={translitScheme}
+            showTranslit={showTranslit}
             onWordTap={openWord}
             daf={daf}
           />
@@ -315,7 +306,7 @@ export default function Today() {
             view={view}
             heSize={heSize}
             enSize={enSize}
-            translitScheme={translitScheme}
+            showTranslit={showTranslit}
             onWordTap={openWord}
             daf={daf}
           />
@@ -499,8 +490,8 @@ function Controls({
   setHeSize,
   enSize,
   setEnSize,
-  translitScheme,
-  setTranslitScheme,
+  showTranslit,
+  setShowTranslit,
 }) {
   const step = (set, value, delta, min, max) =>
     set(Math.min(max, Math.max(min, value + delta)));
@@ -547,55 +538,30 @@ function Controls({
         />
       </div>
 
-      <div
-        style={{
-          marginTop: 'var(--space-md)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'var(--space-sm)',
-          flexWrap: 'wrap',
-        }}
-      >
-        <label
-          htmlFor="translit-scheme"
-          style={{ color: 'var(--muted)', fontSize: '0.85rem' }}
+      <div style={{ marginTop: 'var(--space-md)' }}>
+        <button
+          type="button"
+          className={
+            showTranslit ? 'pill-button pill-button--active' : 'pill-button'
+          }
+          aria-pressed={showTranslit}
+          onClick={() => setShowTranslit(!showTranslit)}
         >
-          Pronunciation guide
-        </label>
-        <select
-          id="translit-scheme"
-          value={translitScheme}
-          onChange={(e) => setTranslitScheme(e.target.value)}
-          style={{
-            padding: 'var(--space-xs) var(--space-sm)',
-            fontFamily: 'var(--font-body)',
-            fontSize: '0.95rem',
-            color: 'var(--text)',
-            background: 'var(--bg-soft)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-md)',
-          }}
-        >
-          <option value={TRANSLIT_NONE}>None</option>
-          {TRANSLIT_SCHEMES.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.label}
-            </option>
-          ))}
-        </select>
+          Show transliteration
+        </button>
+        {showTranslit && (
+          <p
+            style={{
+              color: 'var(--muted)',
+              fontSize: '0.85rem',
+              lineHeight: 1.5,
+              margin: 'var(--space-sm) 0 0',
+            }}
+          >
+            {TRANSLIT_DISCLAIMER}
+          </p>
+        )}
       </div>
-      {translitScheme !== TRANSLIT_NONE && (
-        <p
-          style={{
-            color: 'var(--muted)',
-            fontSize: '0.85rem',
-            lineHeight: 1.5,
-            margin: 'var(--space-sm) 0 0',
-          }}
-        >
-          {TRANSLIT_DISCLAIMER}
-        </p>
-      )}
     </div>
   );
 }
@@ -945,7 +911,7 @@ function Amud({
   view,
   heSize,
   enSize,
-  translitScheme,
+  showTranslit,
   onWordTap,
   daf,
 }) {
@@ -1006,7 +972,7 @@ function Amud({
               view={view}
               heSize={heSize}
               enSize={enSize}
-              translitScheme={translitScheme}
+              showTranslit={showTranslit}
               onWordTap={onWordTap}
               daf={daf}
               neighbors={neighbors}
@@ -1023,9 +989,8 @@ function Amud({
 // the compare-translations control, then a quiet invitation to discuss the line.
 // Discussing it opens the per-line partner inline. A stop is never forced: every
 // line can be taken up and none must be. When a line is taken up, its
-// transliteration shows even if the page-wide guide is off, because that is the
-// moment the reader wants to sound it out; in that case it uses the academic
-// scheme as a sensible default.
+// transliteration shows even if the page-wide toggle is off, because that is the
+// moment the reader wants to sound it out.
 function Segment({
   index,
   amudRef,
@@ -1035,7 +1000,7 @@ function Segment({
   view,
   heSize,
   enSize,
-  translitScheme,
+  showTranslit,
   onWordTap,
   daf,
   neighbors,
@@ -1049,15 +1014,9 @@ function Segment({
   const showHebrew = view === 'both' || view === 'hebrew';
   const showEnglish = view === 'both' || view === 'english';
 
-  // The scheme actually used for this line: the reader's choice when set,
-  // otherwise the academic fallback only while the line is taken up.
-  const activeScheme =
-    translitScheme !== TRANSLIT_NONE
-      ? translitScheme
-      : open
-      ? TRANSLIT_FALLBACK
-      : null;
-  const showTranslit = Boolean(activeScheme);
+  // The line shows transliteration when the page toggle is on, or whenever the
+  // line is taken up.
+  const showLineTranslit = showTranslit || open;
 
   return (
     <li
@@ -1071,8 +1030,7 @@ function Segment({
           html={he}
           fontSize={heSize}
           onWordTap={onWordTap}
-          showTranslit={showTranslit}
-          scheme={activeScheme || TRANSLIT_FALLBACK}
+          showTranslit={showLineTranslit}
         />
       )}
       {showEnglish && en && (

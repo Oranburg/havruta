@@ -6,13 +6,11 @@ This document specifies the deterministic transliteration scheme for the Havruta
 
 The scheme covers Hebrew. Aramaic passages get a best-effort transliteration with the disclaimer that the aid is rougher on Aramaic; the engine does not flag them inline, because the daf is mostly Aramaic and a flag on nearly every line would be noise.
 
-**Schemes implemented (as of v0.4.0).** The document below specifies the **academic** scheme, which is the default. The app now offers three schemes through one engine (`src/lib/transliterate.js`), selected by a "Pronunciation guide" dropdown:
+**One scheme, the Shofar magazine chart (as of v0.5.0).** The app offers a single transliteration, on or off, following the Shofar magazine consonant chart Seth supplied. The consonant values are Shofar's: aleph = ’ (right single quote), ayin = ‘ (left single quote), ḥet = ḥ, khaf = kh, tsadi = ẓ, sin = s, and the begadkefat pairs b/v, k/kh, p/f, with gimel, dalet, and tav always g, d, t. The vowel values and the structural rules below (shva resolution, dagesh forte, the vav/yod/alef/he behavior) are the app's own practical rules, not part of the Shofar chart or any published standard. This is a pronunciation aid, not an authority.
 
-- **academic** (this document): Modern Israeli / Sephardi academic, with diacritics (ḥ, ʿ, ts), kamatz = a, tav = t.
-- **simple**: the same pronunciation written without diacritics (ch for ḥet and khaf, tz for tsadi, alef and ayin dropped).
-- **ashkenazi**: Yeshivish Ashkenazi pronunciation, a separate reading: kamatz = o, cholam = oy, tzere = ei, and a tav without a dagesh = s (so Shabbos, boruch, Toyro). Vowels are faithful; syllable stress is not modeled.
+An earlier build offered three named schemes through a dropdown (a Modern Israeli academic, a no-diacritic variant, and a Yeshivish Ashkenazi). That was removed: the two Israeli variants differed only by diacritics that often did not render, and there is no official Ashkenazi standard to implement faithfully. Note the vocal-shva fix kept from that work: a vocal shva on a consonantal yod or vav is sounded (yehuda, not yhuda; the "ve-" prefix, not "v-"), matching the other consonant branches.
 
-A scheme is a configuration the one engine reads, so the structural rules below (shva resolution, dagesh forte, the vav/yod/alef/he rules) are shared; only the output spelling and a few vowel values change. Note the v0.4.0 fix: a vocal shva on a consonantal yod or vav is now sounded (yehuda, not yhuda; the "ve-" prefix, not "v-"), matching the other consonant branches.
+The consonant table below is the older Sephardi-academic draft; where it differs from the Shofar values just named (aleph, ayin, tsadi), the Shofar values are what the code emits.
 
 ---
 

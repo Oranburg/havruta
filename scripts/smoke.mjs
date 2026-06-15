@@ -67,11 +67,9 @@ if (catalog) {
 console.log('\n--- 2. Transliteration ---');
 
 let transliterate;
-let translitSchemes;
 try {
   const mod = await import('../src/lib/transliterate.js');
   transliterate = mod.transliterate;
-  translitSchemes = mod.TRANSLIT_SCHEMES;
   if (typeof transliterate !== 'function') throw new Error('transliterate is not a function');
   pass('transliterate module imports');
 } catch (err) {
@@ -80,35 +78,26 @@ try {
 }
 
 if (transliterate) {
-  // Worked examples per scheme. Academic is the default scheme; simple and
-  // ashkenazi are the spelling and pronunciation variants. The vocal-shva
-  // examples (yehuda, vehaya) guard the fix to the yod and vav branches.
+  // Shofar magazine chart values (aleph ’, ayin ‘, tsadi ẓ, ḥet ḥ, khaf kh) plus
+  // the app's practical vowels. The vocal-shva example guards the yod/vav fix.
   const cases = [
-    { input: 'מֵאֵימָתַי', scheme: 'academic', expected: 'meʾeimatai', label: 'academic: meʾeimatai' },
-    { input: 'קוֹרִין', scheme: 'academic', expected: 'korin', label: 'academic: korin' },
-    { input: 'מִצְוָתָן', scheme: 'academic', expected: 'mitsvatan', label: 'academic: mitsvatan' },
-    { input: 'כָּל', scheme: 'academic', expected: 'kol', label: 'academic kamats katan: kol' },
-    { input: 'חָכְמָה', scheme: 'academic', expected: 'ḥokhmah', label: 'academic kamats katan: ḥokhmah' },
-    { input: 'יְהוּדָה', scheme: 'academic', expected: 'yehuda', label: 'academic vocal shva: yehuda' },
-    { input: 'מִצְוָתָן', scheme: 'simple', expected: 'mitzvatan', label: 'simple: mitzvatan (ts->tz)' },
-    { input: 'שַׁבָּת', scheme: 'ashkenazi', expected: 'shabbos', label: 'ashkenazi: shabbos (tav rafe=s, kamatz=o)' },
-    { input: 'תּוֹרָה', scheme: 'ashkenazi', expected: 'toyro', label: 'ashkenazi: toyro (cholam=oy)' },
+    { input: 'מֵאֵימָתַי', expected: 'me’eimatai', label: 'aleph mark: me’eimatai' },
+    { input: 'קוֹרִין', expected: 'korin', label: 'korin' },
+    { input: 'מִצְוָתָן', expected: 'miẓvatan', label: 'tsadi: miẓvatan' },
+    { input: 'עַל', expected: '‘al', label: 'ayin mark: ‘al' },
+    { input: 'כָּל', expected: 'kol', label: 'kamats katan: kol' },
+    { input: 'חָכְמָה', expected: 'ḥokhmah', label: 'ḥet: ḥokhmah' },
+    { input: 'יְהוּדָה', expected: 'yehuda', label: 'vocal shva: yehuda' },
+    { input: 'שַׁבָּת', expected: 'shabbat', label: 'dagesh forte: shabbat' },
   ];
 
-  for (const { input, scheme, expected, label } of cases) {
-    const got = transliterate(input, scheme);
+  for (const { input, expected, label } of cases) {
+    const got = transliterate(input);
     if (got === expected) {
       pass(label);
     } else {
       fail(label, `got "${got}", expected "${expected}"`);
     }
-  }
-
-  // The dropdown reads this list; it must hold the three schemes Seth chose.
-  const ids = Array.isArray(translitSchemes) ? translitSchemes.map((s) => s.id) : [];
-  for (const want of ['academic', 'simple', 'ashkenazi']) {
-    if (ids.includes(want)) pass(`TRANSLIT_SCHEMES offers ${want}`);
-    else fail(`TRANSLIT_SCHEMES offers ${want}`, `not in [${ids.join(', ')}]`);
   }
 }
 
