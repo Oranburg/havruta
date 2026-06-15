@@ -456,6 +456,87 @@ export async function getTranslationText(ref, versionTitle) {
   return text;
 }
 
+// Group the links for any single ref into the canon's families, in the order a
+// study partner consults them: parallel Talmud sugyot first, the cited Tanakh
+// next, then commentary, halakhah, Kabbalah, Midrash, and the rest. Each entry
+// is { name, ref }. Used by the partner's sefaria_links tool. Verbatim from the
+// Sefaria links API; nothing is invented.
+export async function getLinksForRef(ref) {
+  const raw = await getLinks(ref);
+  const seen = new Set();
+  const buckets = {
+    talmud: [],
+    tanakh: [],
+    commentary: [],
+    halakhah: [],
+    kabbalah: [],
+    midrash: [],
+    other: [],
+  };
+  for (const item of raw) {
+    const link = normalizeLink(item);
+    if (!link || seen.has(link.ref)) continue;
+    seen.add(link.ref);
+    const cat = (link.category || '').toLowerCase();
+    const entry = { name: link.name, ref: link.ref };
+    if (cat === 'talmud') buckets.talmud.push(entry);
+    else if (cat === 'tanakh') buckets.tanakh.push(entry);
+    else if (cat === 'commentary' || cat === 'quoting commentary')
+      buckets.commentary.push(entry);
+    else if (cat === 'halakhah') buckets.halakhah.push(entry);
+    else if (cat === 'kabbalah') buckets.kabbalah.push(entry);
+    else if (cat === 'midrash') buckets.midrash.push(entry);
+    else buckets.other.push(entry);
+  }
+  return buckets;
+}
+
+// Full-text search across the Sefaria library, verbatim from the search API
+// (verified 2026-06-14: POST /api/search-wrapper returns Elasticsearch hits with
+// hits.hits[]._id naming the ref and highlight.exact carrying the snippet). The
+// search reaches only Sefaria, so it cannot surface non-canonical sources.
+// Returns [{ ref, snippet }], deduped by ref. Throws on a transport failure
+// rather than inventing results.
+const searchCache = new Map();
+export async function searchSefaria(query, size = 6) {
+  const q = typeof query === 'string' ? query.trim() : '';
+  if (!q) return [];
+  const cacheKey = `${size}|${q}`;
+  if (searchCache.has(cacheKey)) return searchCache.get(cacheKey);
+
+  let res;
+  try {
+    res = await fetch(`${API}/search-wrapper`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: q, type: 'text', size }),
+    });
+  } catch (cause) {
+    throw new Error('Could not reach Sefaria search.', { cause });
+  }
+  if (!res.ok) throw new Error(`Sefaria search returned ${res.status}.`);
+  const data = await res.json();
+  const hits =
+    data && data.hits && Array.isArray(data.hits.hits) ? data.hits.hits : [];
+
+  const seen = new Set();
+  const out = [];
+  for (const h of hits) {
+    const id = h && h._id ? String(h._id) : '';
+    // _id looks like "Bava Kamma 2a:1 (Version Title [he])"; drop the version.
+    const ref = id.replace(/\s*\([^)]*\)\s*$/, '').trim();
+    if (!ref || seen.has(ref)) continue;
+    seen.add(ref);
+    const hl =
+      h.highlight && (h.highlight.exact || h.highlight.naive_lemmatizer);
+    const snippet = Array.isArray(hl) ? stripHtml(hl.join(' … ')) : '';
+    out.push({ ref, snippet });
+    if (out.length >= size) break;
+  }
+  searchCache.set(cacheKey, out);
+  return out;
+}
+
 // Get manuscript and print page images for an amud, e.g. "Chullin 44a".
 // The manuscripts endpoint addresses the amud with a dot: "Chullin.44a".
 // Returns [{ slug, imageUrl, label }], with the Vilna page sorted first.

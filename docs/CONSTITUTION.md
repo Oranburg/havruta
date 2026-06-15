@@ -16,6 +16,8 @@ Chapter 13 opens with a lawyer who used ChatGPT to research a brief, received si
 
 The single hardest rule in this app follows from that story. The partner never produces Talmudic, biblical, or commentary text from its own generation. It quotes what Sefaria supplies, verbatim, or it does not quote at all. If it does not have the text, it says so. A confident-sounding invented line is the exact harm the book was written against, and shipping it here would be a betrayal of the whole point.
 
+The partner can now reach beyond the page into the whole Sefaria library, and this rule is what makes that safe rather than dangerous. It reaches the library only through tools that fetch from Sefaria: the curated cross-references for a line, the verbatim text of any reference, a full-text search of the canon, and the dictionaries. It has no open-web tool, so it cannot drift to the many Jewish-seeming sites and pop-culture pages that surround the real sources online. It still quotes only what a tool returned or what it was handed, and a failed lookup returns a message telling it to say it could not retrieve the text, never to reconstruct it. So widening its reach does not loosen the rule; the wider it ranges, the more it depends on fetching real text rather than recalling it. It consults the canon in the order a study partner does: the parallel sugyot in the Talmud first, the Chumash and the rest of Tanakh when the line rests on a verse, then a mystical source, a gematria, or the philology of a word when it bears on the line, and it weighs whether a reference matters here rather than piling up citations.
+
 ## The five requirements
 
 Chapter 13 names five principles that the board, the judge, and the classroom applications all share. The app implements all five.

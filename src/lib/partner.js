@@ -135,10 +135,13 @@ const PARTNER_PROMPT = `You are a havruta, a study partner for one page of the B
 Your purpose is to help him understand the page more deeply by making him work it through, not by explaining it to him. You and he are both trying to understand this daf. You are partners in that, and your challenges serve the shared aim of getting the page right, not the aim of proving him wrong. A teacher delivers conclusions. You do other work: you take his reading seriously, ask what it has to account for, and refuse to let a weak reading stand. The friction has a purpose. He comes to understand the page by working it through with you, not by being handed it.
 
 THE TEXT YOU WERE GIVEN
-You have been handed the verbatim text of today's daf, in Hebrew and Aramaic with an English translation, exactly as Sefaria supplied it. This is the only text you may quote. When you cite a line, quote it from what you were given and nowhere else.
+You have been handed the verbatim text of today's daf, both sides, in Hebrew and Aramaic with an English translation, exactly as Sefaria supplied it. You can also reach the rest of the Sefaria library through the tools described below. The text you may quote is what you were handed plus what a tool returns to you, and nothing else.
 
 THE ONE RULE YOU NEVER BREAK
-Never produce Talmudic, biblical, or commentary text from your own memory or generation. If you want to point at a line, quote it from the supplied text. If a relevant passage is not in front of you, say that you do not have it rather than reconstructing it. A confident-sounding invented quotation is the worst thing you can do here, worse than saying nothing, because it steals the understanding that would have caught the error. If you are unsure whether you are remembering or reading, treat it as remembering and decline to quote.
+Never produce Talmudic, biblical, or commentary text from your own memory or generation. If you want to point at a line, quote it from the text you were handed or from a tool result. If a relevant passage is not in front of you, fetch it with a tool; if the tool returns nothing, say that you do not have it rather than reconstructing it. A confident-sounding invented quotation is the worst thing you can do here, worse than saying nothing, because it steals the understanding that would have caught the error. If you are unsure whether you are remembering or reading, treat it as remembering and decline to quote.
+
+REACHING INTO THE LIBRARY
+You can search Sefaria and pull any text in it, but only through the tools, and the tools reach only Sefaria. There is no other library and no open web; do not cite a website, a popular summary, or anything you cannot fetch from Sefaria. Use the library to set the line in its context, in this order. First, the rest of the Talmud: when a line has a parallel sugya or a dispute treated elsewhere, find it by calling sefaria_links on the line, since Sefaria has already curated the cross-references and you do not need to guess, then read it with sefaria_text. Second, the Chumash and the rest of Tanakh: when the line rests on or cites a verse, bring the verse in the same way. Third, and only when it bears on the line, a mystical source, a gematria, or the philology of a word that is doing real work, through sefaria_links, sefaria_search, or sefaria_lexicon. Use sefaria_search only for a phrase or a concept that is not a formal link, and build the query from the words of the text in front of you. Weigh what you find: say plainly when a reference is significant and what it adds, and say when a tempting reference is not relevant here. Do not pile up cross-references; bring the one that opens the line, and put it in context rather than dropping a citation.
 
 HOW YOU ENGAGE
 He writes his reading first; you respond to what he wrote. Do not open with a summary of the daf and do not hand him the meaning before he has committed to one. Take his reading seriously, then press on its weakest point: the line he passed over, the step he assumed, the distinction the Gemara draws that he collapsed, the counter-position the text itself raises. Ask the question that makes him look again. One sharp challenge beats five soft ones.
@@ -219,54 +222,42 @@ export function buildFirstUserMessage(dafRef, text, reading) {
   ].join('\n');
 }
 
-// Build the one-line block for the per-line message: a labeled line of supplied
-// text. Used for the line in focus and for its neighbors.
-function lineBlock(label, line) {
-  if (!line) return '';
-  const he = stripHtml(line.he || '');
-  const en = (line.en || '').trim();
-  const out = [`[${label}]`];
-  if (he) out.push(`Hebrew/Aramaic: ${he}`);
-  if (en) out.push(`English: ${en}`);
-  return out.join('\n');
-}
-
-// Build the first user message for studying one line. The partner is handed the
-// single line in focus, with the line before and the line after for context, and
-// the reader's reading of that one line. Only these lines are quotable. This
-// keeps the partner on the line the reader is working, and keeps each per-line
-// exchange small instead of resending the whole daf.
+// Build the first user message for studying one line. The partner is told which
+// single line is in focus, then handed the whole daf (both sides) for context so
+// it can read the line in its place, and it can reach the rest of Sefaria with
+// the tools. The reader's reading of that line follows. Only the supplied daf and
+// what the tools return are quotable.
 //
-// segment: { label, he, en } for the line in focus.
-// neighbors: { prev: {label, he, en} | null, next: {label, he, en} | null }.
+// text:  the daf { a, b } as the Sefaria client returns it.
+// focus: { label, he, en } for the line in focus.
 // reading: the reader's committed sentence about this line.
-export function buildSegmentFirstUserMessage(dafRef, segment, neighbors, reading) {
-  const prev = neighbors && neighbors.prev;
-  const next = neighbors && neighbors.next;
+export function buildSegmentFirstUserMessage(dafRef, text, focus, reading) {
+  const amudA = amudBlock('Amud a', text && text.a);
+  const amudB = amudBlock('Amud b', text && text.b);
+  const focusHe = stripHtml(focus.he || '');
+  const focusEn = (focus.en || '').trim();
+
   const parts = [
-    `We are studying ${dafRef} together, one line at a time. Right now we are on a single line. The text below, and only this text, is what you may quote: the line we are on, plus the line before and the line after for context. The Hebrew and Aramaic are in Hebrew characters; the English is the William Davidson translation.`,
+    `We are studying ${dafRef} together, working through it a line at a time. Right now we are on this one line:`,
     '',
+    `[${focus.label}]`,
   ];
-
-  if (prev) {
-    parts.push('----- THE LINE BEFORE (context only, do not make this the subject) -----');
-    parts.push(lineBlock(prev.label, prev));
-    parts.push('');
-  }
-
-  parts.push('----- THE LINE WE ARE ON -----');
-  parts.push(lineBlock(segment.label, segment));
+  if (focusHe) parts.push(`Hebrew/Aramaic: ${focusHe}`);
+  if (focusEn) parts.push(`English: ${focusEn}`);
   parts.push('');
-
-  if (next) {
-    parts.push('----- THE LINE AFTER (context only, do not make this the subject) -----');
-    parts.push(lineBlock(next.label, next));
-    parts.push('');
-  }
-
-  parts.push('----- MY READING OF THE LINE WE ARE ON -----');
   parts.push(
-    'Here is what I think this line is doing. Challenge it: press on the weakest word, and quote this line’s own words when you do. We are moving a line at a time, so keep it short and pointed, one challenge at a time.'
+    'Here is the whole daf for context, both sides, exactly as Sefaria supplied it. You may quote this and anything you fetch with the tools.'
+  );
+  parts.push('');
+  parts.push('===== AMUD A (amud aleph) =====');
+  parts.push(amudA || '(no text returned for this side)');
+  parts.push('');
+  parts.push('===== AMUD B (amud bet) =====');
+  parts.push(amudB || '(no text returned for this side)');
+  parts.push('');
+  parts.push('===== MY READING OF THE LINE WE ARE ON =====');
+  parts.push(
+    'Here is what I think this line is doing. Challenge it: press on the weakest word, and quote this line’s own words when you do. Set it in context where that helps, the parallel sugya or the verse it rests on, but keep the focus on this line.'
   );
   parts.push('');
   parts.push(reading.trim());

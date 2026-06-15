@@ -196,8 +196,8 @@ try {
 if (buildSegmentFirstUserMessage) {
   const msg = buildSegmentFirstUserMessage(
     'Chullin 45',
+    { a: { he: ['אָמַר רַב'], en: ['Rav said'] }, b: { he: [], en: [] } },
     { label: 'Amud a 2', he: 'אָמַר רַב', en: 'Rav said' },
-    { prev: null, next: null },
     'This line introduces a ruling of Rav.'
   );
   const checks = [
@@ -221,6 +221,7 @@ const wiringFiles = [
   'src/lib/usePartnerConversation.js',
   'src/components/PartnerTurns.jsx',
   'src/components/LineHavruta.jsx',
+  'src/lib/sefariaTools.js',
 ];
 for (const f of wiringFiles) {
   if (existsSync(resolve(root, f))) {
@@ -236,6 +237,47 @@ try {
   else fail('Today.jsx wires LineHavruta', 'LineHavruta not referenced');
 } catch (err) {
   fail('Today.jsx readable for wiring check', err.message);
+}
+
+// ---------------------------------------------------------------------------
+// 7. Sefaria tools (offline: specs and adapters only, no network).
+// ---------------------------------------------------------------------------
+console.log('\n--- 7. Sefaria tools ---');
+
+try {
+  const mod = await import('../src/lib/sefariaTools.js');
+  const names = Array.isArray(mod.SEFARIA_TOOLS)
+    ? mod.SEFARIA_TOOLS.map((t) => t.name)
+    : [];
+  for (const want of ['sefaria_links', 'sefaria_text', 'sefaria_search', 'sefaria_lexicon']) {
+    if (names.includes(want)) pass(`tool ${want} defined`);
+    else fail(`tool ${want} defined`, `not in [${names.join(', ')}]`);
+  }
+  const an = mod.toAnthropicTools();
+  if (an.length === names.length && an[0] && an[0].input_schema) pass('toAnthropicTools shape');
+  else fail('toAnthropicTools shape', 'missing input_schema');
+  const oa = mod.toOpenAiTools();
+  if (oa.length === names.length && oa[0] && oa[0].type === 'function' && oa[0].function) pass('toOpenAiTools shape');
+  else fail('toOpenAiTools shape', 'missing function wrapper');
+  if (typeof mod.runSefariaTool === 'function') pass('runSefariaTool exported');
+  else fail('runSefariaTool exported');
+  if (typeof mod.describeToolCall === 'function' && typeof mod.describeToolCall('sefaria_text', { ref: 'X' }) === 'string') {
+    pass('describeToolCall returns a string');
+  } else {
+    fail('describeToolCall returns a string');
+  }
+} catch (err) {
+  fail('sefariaTools module imports', err.message);
+}
+
+try {
+  const mod = await import('../src/lib/sefaria.js');
+  if (typeof mod.searchSefaria === 'function') pass('searchSefaria exported');
+  else fail('searchSefaria exported');
+  if (typeof mod.getLinksForRef === 'function') pass('getLinksForRef exported');
+  else fail('getLinksForRef exported');
+} catch (err) {
+  fail('sefaria search/links exports', err.message);
 }
 
 // ---------------------------------------------------------------------------

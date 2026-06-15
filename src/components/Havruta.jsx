@@ -14,7 +14,7 @@ import PartnerTurns from './PartnerTurns.jsx';
 // step-back synthesis; the primary back-and-forth now happens line by line above.
 // On mount it starts the first exchange with the whole daf as context.
 export default function Havruta({ daf, text, reading }) {
-  const { turns, streaming, partnerError, noKey, start, sendReply, stop } =
+  const { turns, streaming, partnerError, noKey, status, start, sendReply, stop } =
     usePartnerConversation();
   const [reply, setReply] = useState('');
 
@@ -62,6 +62,19 @@ export default function Havruta({ daf, text, reading }) {
       <h3 style={{ marginTop: 0 }}>Your havruta</h3>
 
       <PartnerTurns turns={turns} streaming={streaming} />
+
+      {status && (
+        <p
+          style={{
+            margin: '0 0 var(--space-md)',
+            color: 'var(--muted)',
+            fontSize: '0.85rem',
+            fontStyle: 'italic',
+          }}
+        >
+          {status}…
+        </p>
+      )}
 
       {partnerError && (
         <div

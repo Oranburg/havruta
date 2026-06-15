@@ -298,6 +298,7 @@ export default function Today() {
             showTranslit={showTranslit}
             onWordTap={openWord}
             daf={daf}
+            text={text}
           />
           <Amud
             label="ב"
@@ -309,6 +310,7 @@ export default function Today() {
             showTranslit={showTranslit}
             onWordTap={openWord}
             daf={daf}
+            text={text}
           />
         </>
       )}
@@ -914,6 +916,7 @@ function Amud({
   showTranslit,
   onWordTap,
   daf,
+  text,
 }) {
   const count = Math.max(amud.he.length, amud.en.length);
   const segments = Array.from({ length: count }, (_, i) => i);
@@ -940,27 +943,6 @@ function Amud({
         {segments.map((i) => {
           const he = amud.he[i] || '';
           const en = amud.en[i] || '';
-          // The line before and the line after, given to the partner as context
-          // so it can read this line in its place without being handed the whole
-          // daf. Labels are one-based, matching the segment numbering.
-          const neighbors = {
-            prev:
-              i > 0
-                ? {
-                    label: `${amudName} ${i}`,
-                    he: amud.he[i - 1] || '',
-                    en: amud.en[i - 1] || '',
-                  }
-                : null,
-            next:
-              i < count - 1
-                ? {
-                    label: `${amudName} ${i + 2}`,
-                    he: amud.he[i + 1] || '',
-                    en: amud.en[i + 1] || '',
-                  }
-                : null,
-          };
           return (
             <Segment
               key={i}
@@ -975,7 +957,7 @@ function Amud({
               showTranslit={showTranslit}
               onWordTap={onWordTap}
               daf={daf}
-              neighbors={neighbors}
+              text={text}
             />
           );
         })}
@@ -1003,7 +985,7 @@ function Segment({
   showTranslit,
   onWordTap,
   daf,
-  neighbors,
+  text,
 }) {
   const [open, setOpen] = useState(false);
 
@@ -1072,11 +1054,11 @@ function Segment({
         <div id={`line-${segmentRef}`}>
           <LineHavruta
             daf={daf}
+            text={text}
             segmentRef={segmentRef}
             segmentLabel={segmentLabel}
             he={he}
             en={en}
-            neighbors={neighbors}
             onClose={() => setOpen(false)}
           />
         </div>

@@ -19,18 +19,18 @@ import PartnerTurns from './PartnerTurns.jsx';
 //   segmentRef:   the Sefaria ref of this line, e.g. "Chullin 45a:3".
 //   segmentLabel: a human label, e.g. "Amud a 3".
 //   he, en:       this line's Hebrew/Aramaic and English, verbatim.
-//   neighbors:    { prev, next } lines for context, each { label, he, en } or null.
+//   text:         the whole daf { a, b }, given to the partner for context.
 //   onClose:      collapse this line's partner.
 export default function LineHavruta({
   daf,
+  text,
   segmentRef,
   segmentLabel,
   he,
   en,
-  neighbors,
   onClose,
 }) {
-  const { turns, streaming, partnerError, noKey, start, sendReply, stop } =
+  const { turns, streaming, partnerError, noKey, status, start, sendReply, stop } =
     usePartnerConversation();
   const [committed, setCommitted] = useState(false);
   const [reading, setReading] = useState('');
@@ -47,8 +47,8 @@ export default function LineHavruta({
       dafRef,
       firstUserMessage: buildSegmentFirstUserMessage(
         dafRef,
+        text,
         { label: segmentLabel, he, en },
-        neighbors,
         trimmed
       ),
       openingReaderTurn: trimmed,
@@ -165,6 +165,19 @@ export default function LineHavruta({
       ) : (
         <div>
           <PartnerTurns turns={turns} streaming={streaming} />
+
+          {status && (
+            <p
+              style={{
+                margin: '0 0 var(--space-sm)',
+                color: 'var(--muted)',
+                fontSize: '0.85rem',
+                fontStyle: 'italic',
+              }}
+            >
+              {status}…
+            </p>
+          )}
 
           {partnerError && (
             <div

@@ -21,6 +21,8 @@ export function usePartnerConversation() {
   const [streaming, setStreaming] = useState(false);
   const [partnerError, setPartnerError] = useState(null);
   const [noKey, setNoKey] = useState(false);
+  // A transient line like "Reading Bava Kamma 2a on Sefaria" while a tool runs.
+  const [status, setStatus] = useState(null);
 
   // The API message history sent on each call, kept separate from the visible
   // turns so the saved record and the next call always carry the full exchange.
@@ -57,6 +59,7 @@ export function usePartnerConversation() {
       system,
       messages: messagesRef.current,
       signal: controller.signal,
+      onStatus: (s) => setStatus(s),
       onText: (chunk) => {
         streamingTextRef.current += chunk;
         setTurns((prev) => {
@@ -76,6 +79,7 @@ export function usePartnerConversation() {
         const finalText = streamingTextRef.current;
         abortRef.current = null;
         setStreaming(false);
+        setStatus(null);
 
         setTurns((prev) => {
           const next = prev.slice();
@@ -105,6 +109,7 @@ export function usePartnerConversation() {
       onError: (err) => {
         abortRef.current = null;
         setStreaming(false);
+        setStatus(null);
         setPartnerError(err.message);
         setTurns((prev) =>
           prev.filter((t) => !(t.role === 'partner' && !t.text))
@@ -172,5 +177,5 @@ export function usePartnerConversation() {
     if (abortRef.current) abortRef.current.abort();
   }
 
-  return { turns, streaming, partnerError, noKey, start, sendReply, stop };
+  return { turns, streaming, partnerError, noKey, status, start, sendReply, stop };
 }
