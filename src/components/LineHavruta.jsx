@@ -1,11 +1,16 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Send, Square, Lock, X } from 'lucide-react';
+import { Send, Square, Lock, X, Download } from 'lucide-react';
 import {
   readProviderSettings,
   buildSegmentFirstUserMessage,
 } from '../lib/partner.js';
 import { usePartnerConversation } from '../lib/usePartnerConversation.js';
+import {
+  turnsToMarkdown,
+  downloadMarkdown,
+  fileNameFor,
+} from '../lib/exportMarkdown.js';
 import PartnerTurns from './PartnerTurns.jsx';
 
 // The per-line partner. It opens under one line of the daf and carries the
@@ -258,6 +263,22 @@ export default function LineHavruta({
               </button>
             )}
           </div>
+
+          {!streaming && turns.some((t) => t.role === 'partner' && t.text) && (
+            <button
+              type="button"
+              className="pill-button"
+              style={{ marginTop: 'var(--space-sm)' }}
+              onClick={() =>
+                downloadMarkdown(
+                  fileNameFor(`${dafDisplay} ${segmentLabel}`),
+                  turnsToMarkdown({ dafDisplay, segmentLabel, turns })
+                )
+              }
+            >
+              <Download size={16} /> Download this chat
+            </button>
+          )}
 
           <p
             style={{

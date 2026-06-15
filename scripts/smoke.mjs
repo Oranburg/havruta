@@ -281,6 +281,57 @@ try {
 }
 
 // ---------------------------------------------------------------------------
+// 8. Markdown export.
+// ---------------------------------------------------------------------------
+console.log('\n--- 8. Markdown export ---');
+
+try {
+  const mod = await import('../src/lib/exportMarkdown.js');
+  const live = mod.turnsToMarkdown({
+    dafDisplay: 'Chullin 46',
+    turns: [
+      { role: 'reader', text: 'my reading' },
+      { role: 'partner', text: 'a challenge' },
+    ],
+  });
+  if (live.includes('my reading') && live.includes('a challenge') && live.includes('# Havruta study')) {
+    pass('turnsToMarkdown renders the exchange');
+  } else {
+    fail('turnsToMarkdown renders the exchange', live.slice(0, 80));
+  }
+
+  const saved = mod.sessionToMarkdown({
+    dafDisplay: 'Chullin 46',
+    segmentLabel: 'Amud a 3',
+    readings: ['READING'],
+    messages: [
+      { role: 'user', content: 'BIG DAF CONTEXT BLOCK' },
+      { role: 'assistant', content: 'CHALLENGE' },
+      { role: 'user', content: 'REPLY' },
+    ],
+  });
+  if (saved.includes('READING') && saved.includes('CHALLENGE') && saved.includes('REPLY')) {
+    pass('sessionToMarkdown renders reading and exchange');
+  } else {
+    fail('sessionToMarkdown renders reading and exchange');
+  }
+  if (!saved.includes('BIG DAF CONTEXT BLOCK')) {
+    pass('sessionToMarkdown skips the daf-context message');
+  } else {
+    fail('sessionToMarkdown skips the daf-context message', 'context block leaked into export');
+  }
+
+  const fn = mod.fileNameFor('Chullin 46 Amud a 3');
+  if (typeof fn === 'string' && fn.endsWith('.md') && !/\s/.test(fn)) {
+    pass('fileNameFor builds a safe .md name');
+  } else {
+    fail('fileNameFor builds a safe .md name', fn);
+  }
+} catch (err) {
+  fail('exportMarkdown module imports', err.message);
+}
+
+// ---------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------
 console.log(`\n${passes + failures} checks: ${passes} passed, ${failures} failed`);

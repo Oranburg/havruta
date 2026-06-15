@@ -28,8 +28,8 @@ export default function PartnerTurns({ turns, streaming }) {
         <li
           key={i}
           style={{
-            marginBottom: 'var(--space-md)',
-            padding: 'var(--space-md)',
+            marginBottom: 'var(--space-sm)',
+            padding: 'var(--space-sm) var(--space-md)',
             borderRadius: 'var(--radius-md)',
             background:
               turn.role === 'reader' ? 'var(--bg-soft)' : 'transparent',
@@ -50,7 +50,7 @@ export default function PartnerTurns({ turns, streaming }) {
           >
             {turn.role === 'reader' ? 'You' : 'Havruta'}
           </p>
-          <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>
+          <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>
             {turn.role === 'partner'
               ? renderPartnerText(turn.text)
               : turn.text}

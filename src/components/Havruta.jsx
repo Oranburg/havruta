@@ -1,11 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Send, Square, Lock } from 'lucide-react';
+import { Send, Square, Lock, Download } from 'lucide-react';
 import {
   readProviderSettings,
   buildFirstUserMessage,
 } from '../lib/partner.js';
 import { usePartnerConversation } from '../lib/usePartnerConversation.js';
+import {
+  turnsToMarkdown,
+  downloadMarkdown,
+  fileNameFor,
+} from '../lib/exportMarkdown.js';
 import PartnerTurns from './PartnerTurns.jsx';
 
 // The page-level partner panel. It is reachable only after the reader submits a
@@ -152,6 +157,22 @@ export default function Havruta({ daf, text, reading }) {
           </button>
         )}
       </div>
+
+      {!streaming && turns.some((t) => t.role === 'partner' && t.text) && (
+        <button
+          type="button"
+          className="pill-button"
+          style={{ marginTop: 'var(--space-md)' }}
+          onClick={() =>
+            downloadMarkdown(
+              fileNameFor(dafDisplay),
+              turnsToMarkdown({ dafDisplay, turns })
+            )
+          }
+        >
+          <Download size={16} /> Download this chat
+        </button>
+      )}
 
       <p
         style={{

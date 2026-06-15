@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { ChevronLeft, Trash2, Search } from 'lucide-react';
+import { ChevronLeft, Trash2, Search, Download } from 'lucide-react';
 import { listSessions, deleteSession } from '../lib/sessions.js';
+import {
+  sessionToMarkdown,
+  downloadMarkdown,
+  fileNameFor,
+} from '../lib/exportMarkdown.js';
 
 const HEBREW_RANGE = /[֐-׿יִ-ﭏ]/;
 
@@ -75,14 +80,36 @@ export default function Archive() {
   if (open) {
     return (
       <section>
-        <button
-          type="button"
-          className="pill-button"
-          onClick={() => setOpenId(null)}
-          style={{ marginBottom: 'var(--space-md)' }}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            gap: 'var(--space-sm)',
+            marginBottom: 'var(--space-md)',
+          }}
         >
-          <ChevronLeft size={18} /> Back to archive
-        </button>
+          <button
+            type="button"
+            className="pill-button"
+            onClick={() => setOpenId(null)}
+          >
+            <ChevronLeft size={18} /> Back to archive
+          </button>
+          <button
+            type="button"
+            className="pill-button"
+            onClick={() =>
+              downloadMarkdown(
+                fileNameFor(
+                  `${open.dafDisplay || open.dafRef}${open.segmentLabel ? ` ${open.segmentLabel}` : ''}`
+                ),
+                sessionToMarkdown(open)
+              )
+            }
+          >
+            <Download size={18} /> Download Markdown
+          </button>
+        </div>
 
         <h1>{open.dafDisplay || open.dafRef}</h1>
         {open.segmentLabel && (
