@@ -45,19 +45,26 @@ async function errorFromResponse(res) {
     // Body was not JSON. Fall through to a status-based message.
   }
 
+  let message;
   if (res.status === 401) {
-    return new Error('That API key was not accepted. Check it in Settings, then try again.');
+    message = 'That API key was not accepted. Check it in Settings, then try again.';
+  } else if (res.status === 403) {
+    message = 'That API key is not allowed to call this model. Check the key and model in Settings.';
+  } else if (res.status === 429) {
+    message = 'The request was rate limited or the account is out of credit. Wait a moment, or check your account with the provider, then try again.';
+  } else if (res.status >= 500) {
+    message = 'The provider returned a server error. This is on their end. Try again in a moment.';
+  } else {
+    message = detail || `The request failed with status ${res.status}.`;
   }
-  if (res.status === 403) {
-    return new Error('That API key is not allowed to call this model. Check the key and model in Settings.');
-  }
-  if (res.status === 429) {
-    return new Error('The request was rate limited or the account is out of credit. Wait a moment, or check your account with the provider, then try again.');
-  }
-  if (res.status >= 500) {
-    return new Error('The provider returned a server error. This is on their end. Try again in a moment.');
-  }
-  return new Error(detail || `The request failed with status ${res.status}.`);
+
+  const error = new Error(message);
+  // The status and the provider's own detail let the caller decide whether to
+  // retry. A 400 with tools enabled usually means the provider does not support
+  // tool use, which the caller handles by retrying without tools.
+  error.status = res.status;
+  error.detail = detail;
+  return error;
 }
 
 // Read a Server-Sent Events body line by line, calling onLine for each "data:"
@@ -377,6 +384,27 @@ export async function streamPartner({
       if (onStatus) onStatus(null);
       if (onDone) onDone();
       return;
+    }
+    // If the provider rejected the request (a 400) while tools were enabled, it
+    // most likely does not support tool use. Retry once without tools, so the
+    // partner still answers from the daf it was handed rather than failing. A 400
+    // is a request-time error, so no text has streamed yet and nothing doubles.
+    if (useTools && err && err.status === 400) {
+      if (onStatus) onStatus(null);
+      return streamPartner({
+        provider,
+        baseUrl,
+        apiKey,
+        model,
+        system,
+        messages,
+        signal,
+        onText,
+        onStatus,
+        onDone,
+        onError,
+        useTools: false,
+      });
     }
     const error = err instanceof Error ? err : new Error(String(err));
     if (onStatus) onStatus(null);

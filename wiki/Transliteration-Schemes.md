@@ -6,23 +6,18 @@ The daf is studied aloud. The beit midrash tradition is explicit that Torah must
 
 For a reader who is not fluent in Aramaic or Hebrew, transliteration is the bridge to speaking the text. The app supplies it as a labeled pronunciation aid, not as a substitute for the original characters. Hebrew text appears in Hebrew on screen; the transliteration follows as a reading tool.
 
-Different communities pronounce the same text differently, and a transliteration that looks wrong to one reader sounds exactly right to another. The plan is to offer a choice of schemes so the reader can use the one that matches how they hear and say the words.
+Different communities pronounce the same text differently, and a transliteration that looks wrong to one reader sounds exactly right to another.
+
+## The decision (issue #2, closed)
+
+A selector with three schemes (Modern Israeli academic, Modern Israeli simple, Yeshivish Ashkenazi) was built and then removed. Two reasons. The two Israeli variants differed only by academic diacritics that often did not render on a phone, so the choice was mostly invisible to the reader. And there is no official Yeshivish Ashkenazi standard to implement faithfully; offering one would have been pretending to an authority that does not exist.
+
+So the app ships one transliteration, on or off, and it follows a real published reference: the Shofar magazine consonant chart.
 
 ## Shipped scheme
 
-- [x] **Sephardi academic (shipped).** The current pronunciation aid, documented fully in `docs/TRANSLITERATION-SCHEME.md`. Sephardi-convention vowels (kamats = a, tav = t, never th or s), academic diacritics for ḥet (ḥ) and ʿayin (ʿ), tsadi = ts, no length distinctions. Aramaic passages receive a flag rather than a transliteration. The app's disclaimer reads: "Transliteration is a pronunciation guide following Sephardi academic convention. It is not authoritative and cannot fully represent Aramaic passages."
+- [x] **Shofar magazine chart.** Documented in `docs/TRANSLITERATION-SCHEME.md`. The consonant values are Shofar's: aleph = ’ , ayin = ‘ , ḥet = ḥ , khaf = kh , tsadi = ẓ , sin = s , the begadkefat pairs b/v, k/kh, p/f, and gimel, dalet, tav always g, d, t. The vowel values and the structural rules (shva resolution, dagesh forte, the vav/yod/alef/he behavior) are the app's own practical rules, not part of the Shofar chart or any standard, and the disclaimer says so. Word-over-word: the romanization sits under each Hebrew word. A vocal shva on a consonantal yod or vav is sounded (yehuda, not yhuda; the "ve-" prefix).
 
-## Planned schemes
+## If a scheme choice returns
 
-The following schemes are candidates for a future selector. Each is distinct in ways that matter to readers who use that tradition.
-
-- [ ] **Yeshivish Ashkenazi (planned).** The pronunciation used in many American and Israeli yeshivot descending from the Lithuanian tradition. Key differences from the shipped scheme: kamats = oy or aw (so שַׁבָּת is "Shabbos," not "Shabbat"); tav without dagesh = s (so תּוֹרָה is "toyrah," not "Torah"); segol = e but raised; tsere = ay; holam = oy in some words. This scheme sounds like the spoken tradition many daf yomi learners grew up in.
-- [ ] **Popular/magazine style (planned).** The reader-friendly style found in Jewish magazines, Artscroll publisher notes, and general-audience Jewish publications. Lighter on diacritics (no ḥ, no ʿ), phonetic for an English speaker ("Shabbat," "kiddush," "mitzvah"), no distinction between ḥet and khaf or between ʿayin and alef. Good for readers who want to say words correctly without learning the academic system.
-- [ ] **Modern Israeli Hebrew (planned).** Standard Israeli pronunciation as taught in Hebrew-language education and used in Israeli public discourse. No distinction between ḥet and khaf, ʿayin silent, dagesh fricatives follow modern conventions, stress patterns follow Israeli norms. Useful for readers whose Hebrew background is Israeli rather than diaspora liturgical.
-- [ ] **Strict scholarly (planned).** A maximally precise academic Semitic-studies romanization, close to the SBL (Society of Biblical Literature) Hebrew handbook style. Full diacritics for all emphatic and pharyngeal consonants, length distinctions marked, dagesh forte marked by gemination, shva distinctions marked. For readers who want to connect the transliteration to grammatical analysis.
-
-## Implementation note
-
-This feature is tracked as a GitHub issue. The selector would appear in Settings alongside the existing read-aloud toggle. Each scheme is implemented as an alternative rule set in `src/lib/transliterate.js`, sharing the same character-walk architecture documented in `docs/TRANSLITERATION-SCHEME.md` Section 6. The Sephardi academic scheme ships as the default and is never removed.
-
-This page is the model for how future-feature checklists should be kept in this wiki: one page per feature area, shipped items checked, planned items unchecked, each item described precisely enough that an implementer knows what distinguishes it.
+It would be grounded in a named, published standard rather than an in-house synthesis, so the labels mean something verifiable: the Academy of the Hebrew Language official rules for Modern Israeli, the SBL Handbook or ISO 259 for scholarly. Each would be an alternative rule set in `src/lib/transliterate.js`, sharing the character-walk architecture documented in `docs/TRANSLITERATION-SCHEME.md`. That would reopen as its own issue.
