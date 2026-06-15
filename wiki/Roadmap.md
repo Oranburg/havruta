@@ -68,7 +68,7 @@ The backlog is grouped into areas so new features land in the right place as the
 
 **Reading and text.** Bilingual display, Hebrew-only and English-only views, font and Hebrew-size controls, prev and next daf, jump to any daf, search, the visual page with pinch-zoom and edition switching (Vilna, Bomberg, Munich), a daf yomi calendar view, the Hebrew date.
 
-**The partner.** The streaming challenge engine, the calibration dial, the multilingual partner, modes of challenge (find the weak step, raise the counter-text, press the next layer), a summary of what the reader committed to and what survived, guardrails that keep it from ruling or inventing.
+**The partner.** The streaming challenge engine, the calibration dial, the multilingual partner, modes of challenge (find the weak step, raise the counter-text, press the next layer), a summary of what the reader committed to and what survived, guardrails that keep it from ruling or inventing. The line-by-line partner and its Sefaria tool use are built. The **synthesis partner**, the closing havruta that reads the day's line-by-line work and helps the reader assemble the whole sugya, is one of the most important planned features, because it is the step that turns daily reading into retained understanding; see [Synthesis Partner](Synthesis-Partner) and [issue #8](https://github.com/Oranburg/havruta/issues/8).
 
 **Guidance and commentary.** Rashi, Tosafot, and other commentaries from Sefaria; progressive disclosure of help; grammar and vocabulary glosses for Aramaic; the link graph to parallels and codes.
 
