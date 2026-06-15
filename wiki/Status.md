@@ -13,11 +13,12 @@ These features are deployed at https://oranburg.law/havruta/.
 - In-browser AI study partner: streams responses, never invents text, challenges rather than confirms, never rules on the halakha, and acknowledges when a reading is sound
 - Line-by-line engagement: every line has a Discuss this line control; the human-acts-first gate is at the line (write one sentence on what the line is doing, and the partner challenges that reading with the line's own words). A whole-page reading remains at the end as a closing synthesis.
 - The partner can search Sefaria with judgment: it pulls a line's curated cross-references, reads parallel sugyot and cited verses, searches the canon, and looks words up in the dictionaries, following the order a study partner does (Talmud parallels, then Chumash and Tanakh, then mystical sources, gematria, and philology when relevant). It reaches only Sefaria, never the open web, and quotes only what a tool returns.
+- The synthesis partner: when you have taken up lines, the closing whole-page partner reads a digest of the day's line work and helps you assemble the sugya, say it back, reconcile the tensions across your own readings, map the structure, and write three sentences to keep (issue #8)
 - Multi-provider choice: Claude, GPT, Gemini, OpenRouter, or a custom endpoint; a free Gemini path requires no paid account; the app defaults to the best free option when no key is set
 - Word-over-word transliteration as a pronunciation aid, the romanization sitting under each Hebrew word, following the Shofar magazine consonant chart documented in `docs/TRANSLITERATION-SCHEME.md`; on or off, off by default
 - Engage with the Hebrew: tap a word for the Sefaria lexicon, compare translations side by side, open the passage on Sefaria.org directly, gradient progress bar through the daf
 - Commentaries (Rashi, Tosafot, and more) and connections (cited verses, halakhic codes, parallel passages), all verbatim from Sefaria
-- Saved study record and Archive page to reopen past sessions
+- Saved study record and Archive page to reopen past sessions; download any exchange as Markdown ("Download this chat" in the partner panels, "Download Markdown" in the Archive)
 - Whole-Shas progress map with a streak counter
 - Install to home screen and offline reading for previously studied pages (PWA)
 - Hamburger navigation menu
@@ -30,6 +31,9 @@ These features are deployed at https://oranburg.law/havruta/.
 - Line-by-line engagement and the per-line partner (v0.3.0)
 - Word-over-word transliteration; one Shofar scheme, the multiple-scheme dropdown removed (v0.5.0)
 - The Sefaria-searching partner: tool use across the canon, never leaving Sefaria, never inventing (v0.6.0)
+- Hardened never-invent and anti-caving in the partner; tighter chat spacing; download a chat as Markdown (v0.7.0)
+- The synthesis partner: the closing havruta reads the day's line work and helps assemble the sugya (v0.8.0)
+- Mermaid rendering fixed and all ten content-page diagrams redesigned to carry the argument (v0.8.1)
 
 ## Deferred (tracked as issues)
 

@@ -1,8 +1,14 @@
 # Roadmap
 
-This turns the vision into an order of work. It defines the smallest version worth using, then the phases that grow it, then the full feature backlog organized so the project can scale to dozens of features without losing its shape. Each phase names the Copilot mega-prompts that build it. The prompts live in `prompts/`.
+This turns the vision into an order of work. It defines the smallest version worth using, then the phases that grow it, then the full feature backlog organized so the project can scale to dozens of features without losing its shape.
 
 The guiding rule is reach a working core fast, then build out. Get a daily loop that Seth actually uses, then add depth.
+
+## Current state (June 2026)
+
+The plan below was written for an earlier approach: building the app by handing mega-prompts to a coding agent and deploying behind a server on Vercel. That approach was set aside. The app was built directly and runs now as a static Progressive Web App on GitHub Pages, with the AI partner running in the reader's own browser with the reader's own key (Claude, GPT, Gemini, OpenRouter, or a custom endpoint, with a free Gemini path). The `prompts/` folder is historical.
+
+Shipped well past the original MVP: the daily daf with the Vilna page image and bilingual text; line-by-line engagement with the human-acts-first gate at each line; a partner that searches Sefaria through tools (parallel Talmud, cited verses, the lexicons, full-text search) and never invents; the synthesis partner that reads the day's line work and helps assemble the sugya (issue #8, in progress); the single Shofar-chart transliteration shown word over word; commentaries and connections; the whole-Shas progress map; the saved record with Markdown export; install and offline; and the content pages (start, learn, terms, journey, why, find) with diagrams. Still ahead: study-together rooms, native apps in the stores, advancing the daf at nightfall, and on-device models. The phases and the backlog below stay useful as the map of what the project still grows toward; the current deploy and access details are in `README.md` and `docs/ARCHITECTURE.md`, which supersede the Vercel and Copilot framing here.
 
 ## Phase 0: Foundation (in progress)
 

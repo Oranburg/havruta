@@ -10,7 +10,7 @@ A practical developer guide to the Havruta codebase.
 | Build tool | Vite |
 | Styling | Tailwind CSS with CSS custom properties for the design token layer |
 | Routing | react-router-dom with HashRouter (required for GitHub Pages) |
-| Rich pages | MDX (for `/learn`, `/why`, `/find`) |
+| Rich pages | MDX (for `/start`, `/learn`, `/terms`, `/journey`, `/why`, `/find`) |
 | Diagrams | Mermaid, rendered via a custom `<Mermaid>` component |
 | Icons | lucide-react |
 | PWA | vite-plugin-pwa |
@@ -34,12 +34,15 @@ scripts/          Build helpers and the wiki push script
 
 Key files inside `src/lib/`:
 
-- `dafyomi.js`: fetches today's daf from the Sefaria calendar endpoint and constructs the refs for both amudim
-- `sefaria.js`: fetches bilingual text, manuscripts, commentaries, and connections from Sefaria
-- `transliterate.js`: the Sephardi academic transliteration engine, rule-based from the William Davidson vocalized text
-- `partner.js`: assembles the system prompt and dispatches the study partner request to the selected provider
-- `providers.js`: the multi-provider client (Claude, GPT, Gemini, OpenRouter, custom endpoint)
-- `sessions.js`: saves and retrieves study sessions from IndexedDB
+- `sefaria.js`: the verified Sefaria client. Today's daf from the calendar endpoint, bilingual text, manuscripts, commentaries and connections, `getLinksForRef` for per-line cross-references, and `searchSefaria` (POST `/api/search-wrapper`) for full-text search
+- `sefariaTools.js`: the four Sefaria tools the partner can call (`sefaria_links`, `sefaria_text`, `sefaria_search`, `sefaria_lexicon`) and the per-protocol adapters
+- `anthropic.js`: `streamPartner`, the multi-provider streaming tool-call loop for both wire protocols
+- `partner.js`: the system prompts (`buildSystemPrompt`, `buildSynthesisSystemPrompt`, and the first-message builders) and provider settings
+- `providers.js`: the provider registry (two protocols; Claude, GPT, Gemini, OpenRouter, custom endpoint)
+- `usePartnerConversation.js`: the shared conversation hook used by the line partner and the page partner
+- `transliterate.js`: the rule-based transliteration engine, following the Shofar magazine consonant chart
+- `sessions.js`: saves and retrieves study sessions from localStorage, including `listLineSessionsForDaf`
+- `exportMarkdown.js`: turns an exchange into a Markdown file the reader downloads
 - `shas.js`: the whole-Shas tractate and daf map
 
 ## How the study partner works
@@ -58,7 +61,13 @@ The system prompt, defined in `docs/PARTNER-PROMPT.md` and loaded into `src/lib/
 
 The verbatim Sefaria text for the current daf travels with every request, so the partner challenges a real text it was handed, not a text it recalled from training.
 
-The `providers.js` module handles streaming responses from all supported providers. OpenRouter accepts the same request shape as the OpenAI API, so any model available there is reachable without extra code.
+`src/lib/anthropic.js` holds `streamPartner`, the streaming client for both wire protocols (the Anthropic Messages API and the OpenAI-compatible Chat Completions API, which also covers GPT, Gemini, OpenRouter, and a custom endpoint). It is a tool-call loop: when the model asks for a Sefaria tool, the loop runs that call against Sefaria, feeds the verbatim result back, and continues until the model answers. The four tools are in `src/lib/sefariaTools.js` (cross-references for a line, any reference verbatim, full-text search, and the lexicons). The tools reach only Sefaria, so the partner cannot pull non-canonical sources, and it quotes only what a tool returns or the daf it was handed. If a provider rejects tools, the loop falls back to answering without them.
+
+## Line-by-line engagement and the synthesis partner
+
+Engagement happens line by line. Each Sefaria segment is interactive: under any line the reader opens "Discuss this line," commits a one-sentence reading (the human-acts-first gate, now at the line), and the partner challenges it with the line's own words. `src/components/LineHavruta.jsx` runs this; `src/lib/usePartnerConversation.js` is the shared conversation hook used by both the line partner and the page partner.
+
+At the end of the daf, the whole-page reading box becomes the synthesis partner when the reader has taken up lines. It reads a digest of the day's line exchanges (`listLineSessionsForDaf` in `src/lib/sessions.js`) and helps the reader assemble the sugya: say it back, reconcile tensions across the reader's own readings, map the structure, then press, closing by helping the reader write three sentences to keep. Grounded in GitHub issue #8.
 
 ## Where text and images come from
 
@@ -78,7 +87,7 @@ The verified endpoints and caching rules are documented in `docs/SOURCES.md`.
 
 The app deploys to GitHub Pages automatically on every push to `main`.
 
-The Vite config sets `base: '/havruta/'`. The Actions workflow runs `npm run build` and publishes the `dist/` folder to the `gh-pages` branch. The live URL is https://oranburg.law/havruta/ (a custom domain pointed at the GitHub Pages endpoint).
+The Vite config sets `base: '/havruta/'`. The Actions workflow (`.github/workflows/deploy.yml`) runs `npm ci`, `npm run build`, and `npm run smoke`, then uploads `dist/` as a Pages artifact and deploys it (the Pages source is set to GitHub Actions, not a `gh-pages` branch). The live URL is https://oranburg.law/havruta/ (a custom domain pointed at the GitHub Pages endpoint).
 
 Because the router is HashRouter, all client-side routes work without a server rewrite rule. The PWA manifest and service worker are generated by vite-plugin-pwa into `dist/` at build time.
 
@@ -86,9 +95,9 @@ Because the router is HashRouter, all client-side routes work without a server r
 
 Follow the pattern of the Why page (`src/pages/Why.jsx` and `src/pages/why-content.mdx`).
 
-1. Create `src/pages/your-content.mdx` with the page prose, Mermaid code blocks (fenced with ` ```mermaid `), and image tags pointing into `public/`.
+1. Create `src/pages/your-content.mdx` with the page prose, `<Mermaid caption="..." chart={\`...\`} />` elements for diagrams (not fenced code blocks), and `<LearnImage>` figures for captioned images in `public/`.
 2. Create `src/pages/Your.jsx` as a thin wrapper that imports and renders the MDX content, wrapped in the standard page shell.
-3. Add the route in the router configuration (in `src/main.jsx` or wherever routes are declared) with `path="/your-path"` and `element={<Your />}`.
+3. Add the route in `src/App.jsx` with `path="/your-path"` and `element={<Your />}`.
 4. Add the link to the hamburger nav in `src/components/NavDrawer.jsx`.
 5. If the page needs images, place them in `public/your-path/` and add entries to `assets/images/catalog.json`.
 

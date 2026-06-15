@@ -1,6 +1,6 @@
 # Sources and data
 
-Every text and image in this app comes from Sefaria. The partner never generates primary text. This document lists the endpoints that were tested and the rules for displaying what they return. All endpoints were verified working on 2026-06-13.
+Every text and image in this app comes from Sefaria. The partner never generates primary text. This document lists the endpoints that were tested and the rules for displaying what they return. The first set of endpoints was verified working on 2026-06-13; the search and per-reference links endpoints below were verified on 2026-06-14.
 
 ## What today's daf is
 
@@ -37,6 +37,18 @@ Tested with `https://www.sefaria.org/api/manuscripts/Chullin.44a`. It returns an
 Display the Vilna image by default with zoom and pan, because on a phone the page is dense and the reader needs to enlarge it. Offer a toggle to the Bomberg and Munich images. Show the manuscript name and date as attribution under the image; these are historical sources and the credit belongs on the page.
 
 The Vilna image URL follows the pattern `https://manuscripts.sefaria.org/vilna-romm/{Tractate}_{daf}{amud}.jpg`. Do not hardcode this pattern as the source of truth; read the `image_url` the manuscripts API returns, because tractate spellings and edge cases vary. Use the pattern only as a fallback.
+
+## Cross-references and search (the partner's tools)
+
+The study partner reaches the rest of the canon through these endpoints, all on Sefaria. Verified on 2026-06-14.
+
+Links and cross-references. `https://www.sefaria.org/api/links/{ref}?with_text=0` returns the references Sefaria connects to a passage, each carrying a `category` (Talmud, Tanakh, Commentary, Halakhah, Kabbalah, Midrash, Targum, and so on) and the linked `ref`. `getLinksForRef` in `src/lib/sefaria.js` groups these by family, in the order a study partner consults them: parallel Talmud first, then the cited Tanakh, then commentary, halakhah, Kabbalah, and midrash. This is how the partner finds a line's parallel sugya or the verse it cites without guessing, because Sefaria has already curated the links.
+
+Full-text search. `POST https://www.sefaria.org/api/search-wrapper` with a JSON body `{ "query": "...", "type": "text", "size": N }` returns Elasticsearch-style results under `hits.hits`. Each hit's `_id` names the reference, with a version suffix in parentheses to strip, and `highlight.exact` carries the matching snippet. `searchSefaria` in `src/lib/sefaria.js` reads these into `{ ref, snippet }` pairs. The partner uses search only for a phrase or a concept that is not a formal link, with the query drawn from the words of the text.
+
+The lexicons. `https://www.sefaria.org/api/words/{word}` returns dictionary entries (Jastrow for the rabbinic Aramaic, BDB and Klein for the biblical Hebrew). `lookupWord` in `src/lib/sefaria.js` reads them, trying the word as given, then trimmed of punctuation, then stripped of nikud, so an inflected or pointed form still finds its entry. This backs both the tap-a-word popover and the partner's philology tool.
+
+Every one of these reaches only Sefaria. The partner has no open-web access, and it quotes only what these endpoints return, so widening its reach does not loosen the never-invent rule.
 
 ## Hebrew and Aramaic display rules
 
