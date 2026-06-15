@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Send, Square, Lock, Download } from 'lucide-react';
 import {
   readProviderSettings,
   buildFirstUserMessage,
+  buildSynthesisFirstUserMessage,
 } from '../lib/partner.js';
+import { listLineSessionsForDaf } from '../lib/sessions.js';
 import { usePartnerConversation } from '../lib/usePartnerConversation.js';
 import {
   turnsToMarkdown,
@@ -26,13 +28,21 @@ export default function Havruta({ daf, text, reading }) {
   const dafRef = daf ? daf.ref : '';
   const dafDisplay = daf ? daf.displayEn : dafRef;
 
+  // If the reader took up lines on this daf, the closing partner becomes the
+  // synthesis partner: it reads the day's line work and helps assemble the page.
+  const lineSessions = useMemo(() => listLineSessionsForDaf(dafRef), [dafRef]);
+  const synthesis = lineSessions.length > 0;
+
   // Start the first exchange once, when the panel mounts with a reading.
   useEffect(() => {
     start({
       dafRef,
-      firstUserMessage: buildFirstUserMessage(dafRef, text, reading),
+      firstUserMessage: synthesis
+        ? buildSynthesisFirstUserMessage(dafRef, text, lineSessions, reading)
+        : buildFirstUserMessage(dafRef, text, reading),
       openingReaderTurn: reading.trim(),
       sessionMeta: { dafRef, dafDisplay, reading },
+      synthesis,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -64,7 +74,9 @@ export default function Havruta({ daf, text, reading }) {
       style={{ marginTop: 'var(--space-lg)' }}
       aria-live="polite"
     >
-      <h3 style={{ marginTop: 0 }}>Your havruta</h3>
+      <h3 style={{ marginTop: 0 }}>
+        {synthesis ? 'Your havruta: pulling the page together' : 'Your havruta'}
+      </h3>
 
       <PartnerTurns turns={turns} streaming={streaming} />
 

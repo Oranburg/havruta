@@ -17,6 +17,7 @@ import {
   sefariaUrl,
 } from '../lib/sefaria.js';
 import { readProviderSettings } from '../lib/partner.js';
+import { listLineSessionsForDaf } from '../lib/sessions.js';
 import Havruta from '../components/Havruta.jsx';
 import LineHavruta from '../components/LineHavruta.jsx';
 import Commentaries from '../components/Commentaries.jsx';
@@ -1068,16 +1069,22 @@ function Segment({
 }
 
 function ReadingGate({ reading, setReading, submitted, onSubmit, daf, text }) {
+  // How many lines the reader took up on this daf, so the closing box can become
+  // the synthesis prompt when there is line work to assemble.
+  const lineCount = daf ? listLineSessionsForDaf(daf.ref).length : 0;
   return (
     <section style={{ marginTop: 'var(--space-2xl)' }}>
-      <h2>Step back: your reading of the whole page</h2>
+      <h2>
+        {lineCount > 0
+          ? 'Pull the page together'
+          : 'Step back: your reading of the whole page'}
+      </h2>
       <p style={{ color: 'var(--muted)' }}>
-        You take up lines one at a time as you read above. When you want to pull
-        the page together, write your reading of the whole sugya here and your
-        havruta challenges the whole of it. This is the closing step, not the way
-        in: the line-by-line work above is the heart of it. As ever, you write
-        first, and the partner challenges what you wrote rather than handing you
-        an answer.
+        {lineCount > 0
+          ? `You took up ${lineCount} ${
+              lineCount === 1 ? 'line' : 'lines'
+            } on this page. Now say the sugya back as a whole: the rule it starts from, the question the Gemara raised, the answer, and where it ended. Your havruta has read your line-by-line work and will help you assemble it, pressing where the pieces do not yet fit rather than handing you the page.`
+          : 'When you want to pull the page together, write your reading of the whole sugya here and your havruta challenges the whole of it. You write first, and the partner challenges what you wrote rather than handing you an answer.'}
       </p>
 
       <label htmlFor="reading" className="sr-only">

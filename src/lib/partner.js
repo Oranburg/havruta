@@ -167,6 +167,34 @@ export function buildSystemPrompt(dafRef, level) {
     .replace('{{LEVEL}}', level || DEFAULT_LEVEL);
 }
 
+// The synthesis-mode addendum, appended to the base prompt when the reader steps
+// back to pull the whole page together. Grounded in how synthesis is actually
+// taught (see GitHub issue #8): the learner says the sugya back, the partner's
+// sharpest move is reconciling tensions across the day's line readings, and the
+// close is three sentences in the learner's own words.
+const SYNTHESIS_ADDENDUM = `
+
+SYNTHESIS MODE
+Right now you are not working a single line. You and he are stepping back to pull the whole page together, and you have been given a digest of what he read on each line and where you pressed him. Your one advantage here is that you remember the whole day's work and he may not. Use it.
+
+Orient to the argument, not the page. Early on, ask him whether the argument felt finished when he reached the end of the page or whether he was in the middle of a sugya that runs on, because a printed page is a unit of space and a sugya is a unit of argument: a sugya can fill less than a page or run past the page break. His answer tells you what whole you are assembling.
+
+He has already written his synthesis, which is his attempt to say the sugya back. Treat it that way. Read it against the rule the Mishnah states, the difficulty the Gemara raised (the kushya), the answer it gave (the teirutz), what that answer generated, and where it ended, whether in a conclusion (the maskana) or an unresolved standoff (teiku). Where his account skips or blurs one of these, ask him for that part before you go on. Name these moves in plain English first and put the Hebrew in parentheses; he is a casual scholar and learns the words by mapping the argument, not before it. Do not say the page for him.
+
+Your sharpest move is reconciliation. Before you answer his synthesis, look through the digest of his line readings for two places that pull against each other, where what he said on one line cannot stand together with what he said on another, and ask him about that tension. A partner at the table cannot recall an hour of study line by line; you can, so this is the help only you can give.
+
+Only after he has said it back and the tensions are faced do you help him give the page a shape, and only then do you press his account: what his reading implies for a case the Gemara did not raise, or what a commentator on this page does to the resolution he described. Use the tools to bring a parallel sugya or a commentator when it sharpens the whole.
+
+Close by helping him write three sentences in his own words, not yours: the rule the Mishnah stated, the main difficulty and how it resolved or that it did not, and one question he still has or one connection he noticed. Ask the questions that make him produce those three sentences; do not write them for him. That short record is what he returns to when this page comes around again.
+
+Never summarize the page for him and never explain it before he has produced his own account. The temptation to deliver the sugya is strongest here, and delivering it is the failure. He produces first; you help him build.`;
+
+// The system prompt for the closing synthesis partner: the base prompt plus the
+// synthesis-mode addendum.
+export function buildSynthesisSystemPrompt(dafRef, level) {
+  return buildSystemPrompt(dafRef, level) + SYNTHESIS_ADDENDUM;
+}
+
 // Strip HTML tags so the Hebrew sent to the partner is clean text. Sefaria's
 // Hebrew segments carry formatting markup; the English is already stripped by
 // the Sefaria client.
@@ -265,5 +293,67 @@ export function buildSegmentFirstUserMessage(dafRef, text, focus, reading) {
   parts.push('');
   parts.push(reading.trim());
 
+  return parts.join('\n');
+}
+
+// Trim long text to a cap with an ellipsis, for the digest.
+function cap(value, n) {
+  const t = String(value || '').trim();
+  return t.length > n ? `${t.slice(0, n)} …` : t;
+}
+
+// Build the digest of the day's line-by-line work for the synthesis partner:
+// per line, what the reader read, the heart of the partner's challenge, and how
+// the reader answered. This is what lets the synthesis partner find tensions
+// across the reader's own line readings.
+function lineDigest(lineSessions) {
+  const out = [];
+  for (const s of lineSessions || []) {
+    const label = s.segmentLabel || s.segmentRef || 'a line';
+    const reading = s.readings && s.readings[0] ? s.readings[0] : '';
+    const msgs = Array.isArray(s.messages) ? s.messages : [];
+    const firstPartner = msgs.find((m) => m.role === 'assistant');
+    const replies = msgs.filter((m, i) => m.role === 'user' && i > 0);
+    const lastReply = replies.length ? replies[replies.length - 1].content : '';
+    const lineParts = [`[${label}]`];
+    if (reading) lineParts.push(`I read: ${cap(reading, 320)}`);
+    if (firstPartner) lineParts.push(`You pressed: ${cap(firstPartner.content, 360)}`);
+    if (lastReply) lineParts.push(`I answered: ${cap(lastReply, 280)}`);
+    out.push(lineParts.join('\n'));
+  }
+  return out.join('\n\n');
+}
+
+// Build the first user message for the closing synthesis. The partner is given
+// a digest of the day's line work, then the whole daf for reference, then the
+// reader's own synthesis of the page. Only the supplied daf and what the tools
+// return are quotable.
+//
+// text: the daf { a, b }. lineSessions: the day's line sessions, in order.
+// reading: the reader's synthesis of the whole page.
+export function buildSynthesisFirstUserMessage(dafRef, text, lineSessions, reading) {
+  const amudA = amudBlock('Amud a', text && text.a);
+  const amudB = amudBlock('Amud b', text && text.b);
+  const digest = lineDigest(lineSessions);
+
+  const parts = [
+    `We have been studying ${dafRef} together, a line at a time, and now we are stepping back to pull the whole page together.`,
+    '',
+    '===== THE LINES I WORKED TODAY (my reading on each line, where you pressed, how I answered) =====',
+    digest || '(no line-by-line work was recorded for this page)',
+    '',
+    'Here is the whole daf again, for reference. You may quote it and anything you fetch with the tools.',
+    '',
+    '===== AMUD A (amud aleph) =====',
+    amudA || '(no text returned for this side)',
+    '',
+    '===== AMUD B (amud bet) =====',
+    amudB || '(no text returned for this side)',
+    '',
+    '===== MY SYNTHESIS OF THE WHOLE PAGE =====',
+    'This is my attempt to say what the sugya as a whole is doing, my say-back. Help me assemble it: hold it against what I worked out line by line above, find where my pieces do not yet fit together, and help me reach the rule, the difficulty, the answer, and the ending. Do not say the page for me.',
+    '',
+    reading.trim(),
+  ];
   return parts.join('\n');
 }

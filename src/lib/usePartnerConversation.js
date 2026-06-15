@@ -12,7 +12,11 @@
 
 import { useRef, useState } from 'react';
 import { streamPartner } from './anthropic.js';
-import { readProviderSettings, buildSystemPrompt } from './partner.js';
+import {
+  readProviderSettings,
+  buildSystemPrompt,
+  buildSynthesisSystemPrompt,
+} from './partner.js';
 import { createSession, updateSession } from './sessions.js';
 
 export function usePartnerConversation() {
@@ -33,6 +37,9 @@ export function usePartnerConversation() {
   const streamingTextRef = useRef('');
   const settingsRef = useRef(null);
   const dafRefRef = useRef('');
+  // True when this is the closing synthesis partner, which uses a different
+  // system prompt.
+  const synthesisRef = useRef(false);
 
   // Run one streamed exchange: append an empty partner turn, then fill it as
   // text arrives. On completion, commit the partner turn to the message history
@@ -49,7 +56,9 @@ export function usePartnerConversation() {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const system = buildSystemPrompt(dafRefRef.current, settings.level);
+    const system = synthesisRef.current
+      ? buildSynthesisSystemPrompt(dafRefRef.current, settings.level)
+      : buildSystemPrompt(dafRefRef.current, settings.level);
 
     streamPartner({
       provider: settings.provider,
@@ -123,7 +132,13 @@ export function usePartnerConversation() {
   // reading), the daf ref (for the system prompt), and the metadata to save.
   // Returns false and flips noKey when no provider key is set; the caller shows
   // the no-key panel. Guards against a double start under React strict mode.
-  function start({ dafRef, firstUserMessage, openingReaderTurn, sessionMeta }) {
+  function start({
+    dafRef,
+    firstUserMessage,
+    openingReaderTurn,
+    sessionMeta,
+    synthesis,
+  }) {
     if (startedRef.current) return true;
 
     const settings = readProviderSettings();
@@ -135,6 +150,7 @@ export function usePartnerConversation() {
     startedRef.current = true;
     settingsRef.current = settings;
     dafRefRef.current = dafRef || '';
+    synthesisRef.current = Boolean(synthesis);
     messagesRef.current = [{ role: 'user', content: firstUserMessage }];
 
     const record = createSession({

@@ -93,3 +93,28 @@ export function deleteSession(id) {
   const all = listSessions().filter((s) => s.id !== id);
   writeAll(all);
 }
+
+// The line-by-line sessions for one daf, in reading order, one per line (the most
+// recent if a line was taken up more than once). This is what the synthesis
+// partner reads to help the reader pull the page together. Whole-page sessions
+// (those with no segmentRef) are left out; this is the line work.
+export function listLineSessionsForDaf(dafRef) {
+  if (!dafRef) return [];
+  const all = listSessions().filter(
+    (s) => s && s.dafRef === dafRef && s.segmentRef
+  );
+  // listSessions is newest first, so the first seen per line is the latest.
+  const byLine = new Map();
+  for (const s of all) {
+    if (!byLine.has(s.segmentRef)) byLine.set(s.segmentRef, s);
+  }
+  // Order by amud (a before b) then segment number, parsed from the ref tail
+  // "Chullin 46a:3".
+  const orderKey = (s) => {
+    const m = /([ab]):(\d+)\s*$/.exec(s.segmentRef || '');
+    const amud = m ? (m[1] === 'a' ? 0 : 1) : 9;
+    const idx = m ? parseInt(m[2], 10) : 9999;
+    return amud * 100000 + idx;
+  };
+  return [...byLine.values()].sort((a, b) => orderKey(a) - orderKey(b));
+}

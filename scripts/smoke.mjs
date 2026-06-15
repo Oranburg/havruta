@@ -332,6 +332,63 @@ try {
 }
 
 // ---------------------------------------------------------------------------
+// 9. Synthesis partner.
+// ---------------------------------------------------------------------------
+console.log('\n--- 9. Synthesis partner ---');
+
+try {
+  const mod = await import('../src/lib/partner.js');
+  if (typeof mod.buildSynthesisSystemPrompt === 'function') {
+    const sys = mod.buildSynthesisSystemPrompt('Chullin 46', 'an interested amateur');
+    if (sys.includes('SYNTHESIS MODE') && sys.includes('reconciliation') && sys.includes('Never produce')) {
+      pass('buildSynthesisSystemPrompt extends the base prompt with synthesis mode');
+    } else {
+      fail('buildSynthesisSystemPrompt extends the base prompt with synthesis mode');
+    }
+  } else {
+    fail('buildSynthesisSystemPrompt exported');
+  }
+
+  if (typeof mod.buildSynthesisFirstUserMessage === 'function') {
+    const msg = mod.buildSynthesisFirstUserMessage(
+      'Chullin 46',
+      { a: { he: ['x'], en: ['y'] }, b: { he: [], en: [] } },
+      [
+        {
+          segmentLabel: 'Amud a 2',
+          segmentRef: 'Chullin 46a:2',
+          readings: ['my line reading'],
+          messages: [
+            { role: 'user', content: 'CONTEXT' },
+            { role: 'assistant', content: 'a challenge' },
+          ],
+        },
+      ],
+      'my whole-page synthesis'
+    );
+    const ok =
+      msg.includes('THE LINES I WORKED TODAY') &&
+      msg.includes('my line reading') &&
+      msg.includes('a challenge') &&
+      msg.includes('my whole-page synthesis');
+    if (ok) pass('buildSynthesisFirstUserMessage carries the digest and the synthesis');
+    else fail('buildSynthesisFirstUserMessage carries the digest and the synthesis');
+  } else {
+    fail('buildSynthesisFirstUserMessage exported');
+  }
+} catch (err) {
+  fail('synthesis partner imports', err.message);
+}
+
+try {
+  const mod = await import('../src/lib/sessions.js');
+  if (typeof mod.listLineSessionsForDaf === 'function') pass('listLineSessionsForDaf exported');
+  else fail('listLineSessionsForDaf exported');
+} catch (err) {
+  fail('sessions synthesis export', err.message);
+}
+
+// ---------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------
 console.log(`\n${passes + failures} checks: ${passes} passed, ${failures} failed`);

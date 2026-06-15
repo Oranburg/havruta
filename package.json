@@ -1,7 +1,7 @@
 {
   "name": "havruta",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.8.0",
   "type": "module",
   "description": "A daf yomi study partner that challenges your reading instead of handing you the answer.",
   "scripts": {
