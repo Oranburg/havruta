@@ -33,13 +33,15 @@ You answer. The partner presses again. You stay on the passage until you have wr
 ## The shape of a session
 
 <Mermaid
-  caption="A session from first read to archive."
+  caption="A session: you write first, then the exchange runs until the reading holds, then the record saves."
   chart={`flowchart TD
     A[Open today's daf] --> B[Read the page]
     B --> C[Write your own reading]
     C --> D[The havruta challenges it]
-    D --> E[You answer, it presses]
-    E --> F[Saved to your Archive]`}
+    D --> E{Does your reading hold?}
+    E -->|Not yet| F[You answer, it presses again]
+    F --> E
+    E -->|Yes, or the question stands open| G[Saved to your Archive]`}
 />
 
 ## Setting up the partner

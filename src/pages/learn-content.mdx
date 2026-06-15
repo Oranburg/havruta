@@ -43,15 +43,15 @@ A חַבְרוּתָא (*chavruta*, a study pair, from the Aramaic root for comp
 One partner reads the line aloud. Reading aloud forces a pronunciation, a pronunciation forces a parsing, and a parsing forces a meaning. The other partner translates or paraphrases what was read, which is the first test: a line you cannot render is a line you have not yet understood. Then the one who read proposes what the line means, what problem it answers, what claim it advances. The other objects. The objection is the center of the method. A partner who says "yes, that makes sense" has not done the job. The job is to ask whether the reading accounts for this word, whether it conflicts with the next passage, whether Rashi supports it or cuts against it. A proposal has to survive challenge before the pair moves on. The response is either a defense of the reading or a revision of it, and the pair stays on the line until they have wrung some resolution from it, even when the resolution is that they do not know, and here is exactly why.
 
 <Mermaid
-  caption="The chevruta loop. Two partners work one line until it holds."
+  caption="The chevruta loop. One partner reads and proposes; the other objects; the pair stays on the line until the reading holds or both know exactly why it does not."
   chart={`flowchart TD
     A[Read the line aloud] --> B[Translate it]
     B --> C[Propose a reading]
-    C --> D[Object, raise a kushya]
+    C --> D["Object: raise a kushya"]
     D --> E[Respond or revise]
     E --> F{Does the reading hold?}
-    F -->|Yes| G[Move to the next line]
-    F -->|No| C`}
+    F -->|"Yes, or the difficulty is named"| G[Move to the next line]
+    F -->|Not yet| C`}
 />
 
 This back and forth is what the tradition calls שַׁקְלָא וְטַרְיָא (*shakla ve-tarya*, the taking and the carrying). The phrase names both the work of the pair and the inner structure of the Talmudic text itself. The students are doing in miniature what the Talmud's editors did across generations.
@@ -73,14 +73,15 @@ A סוּגְיָה (*sugya*, the running argument on a single legal topic) usual
 A few terms name the movement of the argument. קֻשְׁיָה (*kushya*, a difficulty or objection) is what the Gemara raises against a proposed reading, whether a contradiction from another source, a logical problem, or an apparent impossibility. תֵּירוּץ (*teirutz*, a resolution) is the answer offered, and it does not always hold; it can generate a fresh difficulty. תֵּיקוּ (*teiku*) is the signal that the question stands open. The Gemara does not force a resolution it cannot honestly reach, and some of these questions have stood unresolved for fifteen centuries. A teiku is an honest marker, not a placeholder for a missing answer.
 
 <Mermaid
-  caption="The shape of a sugya. The argument can end in a resolution or stand open in teiku."
+  caption="The shape of a sugya. The argument loops through kushya and teirutz until it reaches a maskana, a resolution, or stands open as teiku."
   chart={`flowchart TD
     A[Mishnah states a rule] --> B[Gemara raises a kushya]
-    B --> C[A teirutz is offered]
-    C --> D{Does a new kushya arise?}
-    D -->|Yes| B
-    D -->|No| E[Resolution]
-    D -->|Unresolved| F[Teiku, the question stands]`}
+    B --> C{Can a teirutz be offered?}
+    C -->|Yes| D[Teirutz is proposed]
+    C -->|No| E["Teiku: the question stands"]
+    D --> F{Does the teirutz hold?}
+    F -->|"New kushya arises"| B
+    F -->|Holds| G["Maskana: resolution"]`}
 />
 
 Reading a sugya means tracking this shape: what is the difficulty, what is the proposed answer, what does the answer generate, where does the chain end. A student who can state the structure of a sugya in plain prose has understood it. A student who can only recite the words has not.
@@ -96,11 +97,13 @@ The Gemara text sits in the center column, and the student reads it first, line 
 Beyond these two, the page points to the רִאשׁוֹנִים (*rishonim*, the early authorities, roughly the eleventh to fifteenth centuries) and the אַחֲרוֹנִים (*acharonim*, the later authorities, from the sixteenth century to the present), and to the codes, chiefly the Shulchan Aruch of Rabbi Yosef Karo (1563) and the Mishneh Torah of Rambam. A student tracing how a ruling emerges from the sugya moves outward through these layers. That is the work of advanced study, not the starting point.
 
 <Mermaid
-  caption="The layers of the page. Study moves from the center outward."
+  caption="The layers of the page. Study moves outward from the Gemara: Rashi for the plain sense, Tosafot for the hard questions, then the rishonim and codes to trace how the ruling was settled."
   chart={`flowchart TD
-    G[Gemara text, the center] --> R[Rashi, the plain sense]
-    R --> T[Tosafot, the hard questions]
-    T --> O[Rishonim, acharonim, and the codes]`}
+    G["Gemara<br/>the center column, read first"]
+    G --> R["Rashi<br/>inner margin, the plain sense"]
+    G --> T["Tosafot<br/>outer margin, the hard questions"]
+    R --> O["Rishonim, acharonim,<br/>and the codes"]
+    T --> O`}
 />
 
 A typical daf yomi learner covers the Gemara text with Rashi, turns to Tosafot where the teacher or the partner flags a real difficulty, and does not exhaust every rishon on a single page. That depth belongs to a different mode of study.
@@ -120,14 +123,15 @@ The tradition keeps two honest postures toward the text, each with its own purpo
 עִיּוּן (*iyun*, depth) is slow, intensive analysis of a single sugya. In iyun a pair might spend an entire session, two or three hours, on half a page. Every word is questioned, every relevant rishon consulted, the logical structure mapped, contradictions with parallel passages tracked. Iyun is what yeshiva students do in their main learning block.
 
 <Mermaid
-  caption="Two tracks. Breadth moves across the cycle; depth drills into one sugya."
-  chart={`flowchart LR
-    subgraph Bekiut [Bekiut, breadth]
-      B1[Page] --> B2[Next page] --> B3[Across the cycle]
-    end
-    subgraph Iyun [Iyun, depth]
-      I1[One sugya] --> I2[Rashi and Tosafot] --> I3[Rishonim and parallels]
-    end`}
+  caption="Two modes, one text. Bekiut moves a page a day across the whole cycle. Iyun stays on one sugya until every difficulty is settled. The great scholars did both."
+  chart={`flowchart TD
+    TAL["The Talmud"]
+    TAL --> BEK["Bekiut: breadth<br/>one page a day,<br/>forward through the cycle"]
+    TAL --> IYU["Iyun: depth<br/>one sugya, every word,<br/>every parallel"]
+    BEK --> B1["Broad fluency,<br/>the whole in view"]
+    IYU --> I1["Deep command<br/>of one passage"]
+    B1 --> BOTH["The tradition needs both"]
+    I1 --> BOTH`}
 />
 
 Neither mode is the superior one, and the tradition needs both. Breadth without depth gives broad familiarity and shallow roots. Depth without breadth gives deep command of one passage while leaving the student unable to place it in the larger movement of the Talmud. The great scholars did both: wide fluency in the whole and deep mastery of particular tractates. For daf yomi the daily discipline is breadth by design. The page moves forward each day whether or not yesterday's passage was fully settled, and the learner slowly comes to tell what can be carried forward as an open question from what has to be settled before moving on.
@@ -147,18 +151,20 @@ The Gemara in Eruvin 54b records how Moshe transmitted the Oral Law:
 > The Sages taught: What was the order of the Mishna? Moses learned from the mouth of the Almighty. Aaron entered and Moses taught him his lesson. Aaron moved aside and sat to Moses' left. His sons entered and Moses taught them their lesson. His sons moved aside; Elazar sat to Moses' right and Itamar to Aaron's left... Hence everyone had heard it four times.
 
 <Mermaid
-  caption="The fourfold review of Eruvin 54b. Each step hears the lesson once more, so all Israel hears it four times."
+  caption="The fourfold review of Eruvin 54b. Moses teaches each group in turn; each prior group hears again as the next is taught. Everyone ends with four hearings."
   chart={`sequenceDiagram
     participant G as God
     participant M as Moses
     participant A as Aaron
-    participant S as Aaron's sons
-    participant E as The elders
-    G->>M: Moses learns the lesson
-    M->>A: Aaron hears it (once)
-    M->>S: Aaron's sons hear it (twice)
-    M->>E: The elders hear it (three times)
-    Note over A,E: All Israel hears it four times`}
+    participant S as Sons
+    participant E as Elders
+    G->>M: Teaches Moses (round 1)
+    M->>A: Moses teaches Aaron (Aaron: 1)
+    Note over A: Aaron steps aside
+    M->>S: Moses teaches the sons (Sons: 1, Aaron hears again: 2)
+    Note over S: Sons step aside
+    M->>E: Moses teaches the elders (Elders: 1, Sons: 2, Aaron: 3)
+    Note over A,E: All Israel then hears from all of them (Aaron: 4, Sons: 3, Elders: 2, Israel: 1)`}
 />
 
 From this account Rabbi Eliezer draws a rule:
@@ -192,12 +198,13 @@ A שִׁיעוּר (*shiur*, a lesson) is a session led by a מַגִּיד שִ
 The relationship between the two runs in both directions, preparation and review. A pair prepares for a shiur by working through the text beforehand, so that when the teacher raises a difficulty the students have already felt it, and the shiur lands harder for it. Afterward the pair returns to the text to weigh what they heard against what they understood.
 
 <Mermaid
-  caption="The prepare-and-review loop. The pair prepares, the shiur is given, the pair reviews, and the loop turns to the next daf."
+  caption="The prepare-and-review cycle. The pair prepares so the shiur lands harder; after the shiur the pair returns to weigh what they heard against what they understood; then the daf moves forward."
   chart={`flowchart LR
-    A[The chevruta prepares] --> B[The shiur is given]
-    B --> C[The chevruta reviews]
-    C --> D[The next daf]
-    D --> A`}
+    A["Chevruta prepares<br/>feel the difficulty first"] --> B["Shiur is given<br/>the difficulty lands harder"]
+    B --> C["Chevruta reviews<br/>weigh what you heard<br/>against what you understood"]
+    C --> D["Chazara: the lesson<br/>sits more securely"]
+    D --> E["Next daf"]
+    E --> A`}
 />
 
 The principle from Kiddushin 30a applies here too:

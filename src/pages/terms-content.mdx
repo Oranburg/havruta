@@ -23,14 +23,15 @@ The Talmud's study hall runs on a shared vocabulary, most of it Hebrew or Aramai
 **שַׁקְלָא וְטַרְיָא** (shakla ve-tarya): The give and take of Talmudic argument, literally the taking and the carrying. The phrase names both the structure of the text and the practice of chevruta study. The students' back-and-forth mirrors what the editors of the Talmud did across generations.
 
 <Mermaid
-  caption="The shape of a sugya. The argument can end in a resolution or stand open as teiku."
+  caption="The shape of a sugya. The argument loops through kushya and teirutz until it reaches a maskana, a resolution, or stands open as teiku."
   chart={`flowchart TD
     A[Mishnah states a rule] --> B[Gemara raises a kushya]
-    B --> C[A teirutz is offered]
-    C --> D{Does a new kushya arise?}
-    D -->|Yes| B
-    D -->|No| E[Resolution]
-    D -->|Unresolved| F[Teiku, the question stands]`}
+    B --> C{Can a teirutz be offered?}
+    C -->|Yes| D[Teirutz is proposed]
+    C -->|No| E["Teiku: the question stands"]
+    D --> F{Does the teirutz hold?}
+    F -->|"New kushya arises"| B
+    F -->|Holds| G["Maskana: resolution"]`}
 />
 
 ## Study partners and places

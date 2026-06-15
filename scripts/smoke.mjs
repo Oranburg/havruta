@@ -389,6 +389,36 @@ try {
 }
 
 // ---------------------------------------------------------------------------
+// 10. Mermaid label safety: no ASCII double quote used as a Hebrew gershayim
+// inside a chart, which closes a Mermaid ["..."] label early and breaks it.
+// ---------------------------------------------------------------------------
+console.log('\n--- 10. Mermaid label safety ---');
+
+const mdxPages = ['start', 'learn', 'why', 'terms', 'journey'].map(
+  (f) => `src/pages/${f}-content.mdx`
+);
+const chartRe = /chart=\{`([\s\S]*?)`\}/g;
+// Hebrew letter, an ASCII double quote, Hebrew letter: a gershayim written wrong.
+const gershayimTrap = /[א-ת]"[א-ת]/;
+let mermaidIssues = 0;
+for (const f of mdxPages) {
+  let src;
+  try {
+    src = readFileSync(resolve(root, f), 'utf8');
+  } catch {
+    continue;
+  }
+  let m;
+  while ((m = chartRe.exec(src))) {
+    if (gershayimTrap.test(m[1])) {
+      mermaidIssues += 1;
+      fail(`${f}: ASCII quote as gershayim in a chart`, 'use the U+05F4 gershayim ‎״‎');
+    }
+  }
+}
+if (mermaidIssues === 0) pass('no ASCII-quote gershayim traps in any chart');
+
+// ---------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------
 console.log(`\n${passes + failures} checks: ${passes} passed, ${failures} failed`);

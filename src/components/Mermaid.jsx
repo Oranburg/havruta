@@ -96,7 +96,10 @@ export default function Mermaid({ chart, caption }) {
         const mermaid = (await import('mermaid')).default;
         mermaid.initialize({
           startOnLoad: false,
-          securityLevel: 'strict',
+          // The charts are author-written, not reader input, so "loose" is safe
+          // here. "strict" conflicts with htmlLabels in Mermaid v11 and throws
+          // during render, which is what dropped these diagrams to the fallback.
+          securityLevel: 'loose',
           theme: 'base',
           themeVariables: themeVarsFor(mode),
           flowchart: { curve: 'basis', htmlLabels: true, useMaxWidth: true },
