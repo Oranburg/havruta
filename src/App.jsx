@@ -23,6 +23,7 @@ import Journey from './pages/Journey.jsx';
 import NotFound from './pages/NotFound.jsx';
 import InstallPrompt from './components/InstallPrompt.jsx';
 import NavDrawer from './components/NavDrawer.jsx';
+import { initServiceWorker } from './sw-register.js';
 
 const THEME_KEY = 'havruta-theme';
 
@@ -123,6 +124,14 @@ function Footer() {
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef(null);
+
+  // Astro mounts this island, so the service-worker registration that used to
+  // run after createRoot in main.jsx now runs from the app's own mount effect.
+  // The self-heal in sw-register.js (the controllerchange reload and the
+  // chunk-load recovery) is unchanged.
+  useEffect(() => {
+    initServiceWorker();
+  }, []);
 
   return (
     <HashRouter>

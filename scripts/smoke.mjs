@@ -481,9 +481,12 @@ try {
 console.log('\n--- 12. Service-worker self-heal ---');
 
 try {
-  const cfg = readFileSync(resolve(root, 'vite.config.js'), 'utf8');
-  if (/registerType:\s*'autoUpdate'/.test(cfg)) pass('vite-plugin-pwa uses registerType autoUpdate');
-  else fail('vite-plugin-pwa uses registerType autoUpdate');
+  // The PWA options moved from vite.config.js into astro.config.mjs when the
+  // build shell became Astro; the @vite-pwa/astro wrapper carries the same
+  // workbox config.
+  const cfg = readFileSync(resolve(root, 'astro.config.mjs'), 'utf8');
+  if (/registerType:\s*'autoUpdate'/.test(cfg)) pass('VitePWA uses registerType autoUpdate');
+  else fail('VitePWA uses registerType autoUpdate');
   if (/cleanupOutdatedCaches:\s*true/.test(cfg)) pass('workbox cleanupOutdatedCaches is set');
   else fail('workbox cleanupOutdatedCaches is set');
   if (/clientsClaim:\s*true/.test(cfg)) pass('workbox clientsClaim is set');
@@ -496,9 +499,11 @@ try {
   if (/'\*\*\/mermaid\*'/.test(cfg)) pass('the diagram-chunk globIgnores are kept');
   else fail('the diagram-chunk globIgnores are kept');
 
-  const main = readFileSync(resolve(root, 'src/main.jsx'), 'utf8');
-  if (main.includes('sw-register') && /initServiceWorker\(\)/.test(main)) pass('main.jsx wires the self-heal registration');
-  else fail('main.jsx wires the self-heal registration');
+  // Under the island, App.jsx runs initServiceWorker from a mount effect; the
+  // old main.jsx is gone with the Vite entry.
+  const main = readFileSync(resolve(root, 'src/App.jsx'), 'utf8');
+  if (main.includes('sw-register') && /initServiceWorker\(\)/.test(main)) pass('App.jsx wires the self-heal registration');
+  else fail('App.jsx wires the self-heal registration');
 
   const reg = readFileSync(resolve(root, 'src/sw-register.js'), 'utf8');
   if (reg.includes("from 'virtual:pwa-register'")) pass('registration uses the virtual:pwa-register module');
@@ -583,6 +588,53 @@ try {
     ? pass('the control is fed both amudim of Hebrew') : fail('the control is fed both amudim of Hebrew');
 } catch (err) {
   fail('read-aloud control', err.message);
+}
+
+// ---------------------------------------------------------------------------
+// Astro build shell + island. The whole React app mounts as a single
+// client-only island, the base path is /havruta/, and the emitted dist/ carries
+// the app shell, the built assets, the service worker, and the manifest under
+// the base. Astro is only the host; the React app is unchanged.
+// ---------------------------------------------------------------------------
+console.log('\n--- Astro build shell + island ---');
+try {
+  const astroPage = readFileSync(resolve(root, 'src/pages/index.astro'), 'utf8');
+  astroPage.includes("import App from '../App.jsx'")
+    ? pass('index.astro imports the existing App') : fail('index.astro imports the existing App');
+  /<App\s+client:only="react"\s*\/>/.test(astroPage)
+    ? pass('index.astro mounts App as a client:only react island') : fail('index.astro mounts App as a client:only react island');
+  // The pre-paint theme script and the root div are carried over.
+  astroPage.includes('havruta-theme') ? pass('index.astro keeps the pre-paint theme script') : fail('index.astro keeps the pre-paint theme script');
+  astroPage.includes('id="root"') ? pass('index.astro keeps the root mount node') : fail('index.astro keeps the root mount node');
+
+  const cfg = readFileSync(resolve(root, 'astro.config.mjs'), 'utf8');
+  /base:\s*'\/havruta\/'/.test(cfg)
+    ? pass("astro.config.mjs sets base '/havruta/'") : fail("astro.config.mjs sets base '/havruta/'");
+  /output:\s*'static'/.test(cfg)
+    ? pass('astro.config.mjs builds a static site') : fail('astro.config.mjs builds a static site');
+  // The MDX pages keep compiling as React: @mdx-js/rollup runs in Astro's Vite,
+  // not the Astro MDX integration, so the React components-prop pattern survives.
+  /@mdx-js\/rollup/.test(cfg) && /enforce:\s*'pre'/.test(cfg)
+    ? pass('astro.config.mjs keeps @mdx-js/rollup (enforce pre) for React MDX') : fail('astro.config.mjs keeps @mdx-js/rollup for React MDX');
+
+  // The emitted build, if present, serves the shell with base-correct assets and
+  // ships the service worker and manifest under the base. The check is skipped
+  // before the first build so the harness still runs offline; CI runs it after
+  // astro build, where dist/ is present.
+  const distIndex = resolve(root, 'dist/index.html');
+  if (existsSync(distIndex)) {
+    const html = readFileSync(distIndex, 'utf8');
+    /\/havruta\/_astro\//.test(html) || /src="\/havruta\//.test(html)
+      ? pass('dist/index.html references built assets under /havruta/') : fail('dist/index.html references built assets under /havruta/');
+    existsSync(resolve(root, 'dist/sw.js'))
+      ? pass('dist ships the service worker (sw.js)') : fail('dist ships the service worker (sw.js)');
+    existsSync(resolve(root, 'dist/manifest.webmanifest'))
+      ? pass('dist ships the PWA manifest') : fail('dist ships the PWA manifest');
+  } else {
+    console.log('SKIP  dist/ checks (no build present; run astro build first)');
+  }
+} catch (err) {
+  fail('Astro build shell + island', err.message);
 }
 
 // ---------------------------------------------------------------------------

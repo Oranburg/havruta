@@ -1,18 +1,33 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import { defineConfig } from 'astro/config';
+import react from '@astrojs/react';
+import VitePWA from '@vite-pwa/astro';
 import mdx from '@mdx-js/rollup';
-import { VitePWA } from 'vite-plugin-pwa';
 
-// Deployed on GitHub Pages under the /havruta/ subpath. Uses HashRouter, so deep links
-// resolve client-side and no SPA 404 rewrite is needed.
+// Deployed on GitHub Pages under the /havruta/ subpath. The whole React app
+// mounts as a single client-only island, so Astro is only the build shell and
+// the HTML host. The app keeps its HashRouter, so deep links resolve
+// client-side and no SPA 404 rewrite is needed.
+//
+// The /learn, /why, /find, /start, /terms, and /journey pages are authored in
+// MDX and imported into .jsx wrappers as React components that take a
+// `components` prop. @mdx-js/rollup (enforce: 'pre') compiles those .mdx files
+// with the React automatic runtime, exactly as the old Vite build did. The
+// Astro MDX integration is deliberately not used: it would render .mdx as Astro
+// components and break the React `components`-prop pattern these pages rely on.
+//
+// Astro emits the static site to dist/, which the GitHub Pages workflow uploads
+// unchanged.
 export default defineConfig({
   base: '/havruta/',
-  plugins: [
-    // MDX runs before the React plugin (enforce: 'pre') so the .mdx that backs
-    // the /learn page compiles with the React automatic runtime, the same way
-    // .jsx files do. The /learn page is authored in MDX.
-    { enforce: 'pre', ...mdx({ jsxImportSource: 'react' }) },
-    react({ include: /\.(jsx|js|mdx|md|tsx|ts)$/ }),
+  output: 'static',
+  outDir: './dist',
+  vite: {
+    plugins: [
+      { enforce: 'pre', ...mdx({ jsxImportSource: 'react' }) },
+    ],
+  },
+  integrations: [
+    react({ include: ['**/*.{jsx,js,mdx,md,tsx,ts}'] }),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
