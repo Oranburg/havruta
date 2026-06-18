@@ -26,6 +26,7 @@ import ScrollProgress from '../components/ScrollProgress.jsx';
 import WordPopover from '../components/WordPopover.jsx';
 import TappableHebrew from '../components/TappableHebrew.jsx';
 import TranslationCompare from '../components/TranslationCompare.jsx';
+import ReadAloud from '../components/ReadAloud.jsx';
 
 // Reading views the toggle offers.
 const VIEWS = [
@@ -286,6 +287,13 @@ export default function Today() {
         showTranslit={showTranslit}
         setShowTranslit={setShowTranslit}
       />
+
+      {text && (
+        <ReadAloud
+          segments={[...(text.a.he || []), ...(text.b.he || [])]}
+          label="this daf"
+        />
+      )}
 
       {text && (
         <>

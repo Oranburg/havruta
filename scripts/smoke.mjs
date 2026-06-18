@@ -518,6 +518,74 @@ try {
 }
 
 // ---------------------------------------------------------------------------
+// Read-aloud control (browser speech synthesis)
+// ---------------------------------------------------------------------------
+// PocketTorah's leyning recordings cover the Torah, not the Talmud, so the daf
+// uses a plain browser read-aloud. These checks confirm the control exists and is
+// wired into the reading view, that it never autoplays, that it checks for a
+// Hebrew voice and degrades gracefully when none exists rather than reading
+// Hebrew with an English voice, and that it cancels speech on unmount.
+console.log('\n--- Read-aloud control ---');
+try {
+  const speech = await import('../src/lib/speech.js');
+  typeof speech.speechSupported === 'function'
+    ? pass('speech.js exports speechSupported') : fail('speech.js exports speechSupported');
+  typeof speech.hebrewVoices === 'function'
+    ? pass('speech.js exports hebrewVoices') : fail('speech.js exports hebrewVoices');
+  typeof speech.cancelSpeech === 'function'
+    ? pass('speech.js exports cancelSpeech') : fail('speech.js exports cancelSpeech');
+  // plainTextFromHtml strips markup so the synthesizer reads the words, and it
+  // works without a DOM (this smoke test runs in Node).
+  if (typeof speech.plainTextFromHtml === 'function') {
+    const stripped = speech.plainTextFromHtml('<b>שלום</b> <i>עולם</i>');
+    stripped === 'שלום עולם'
+      ? pass('plainTextFromHtml strips HTML to plain Hebrew') : fail('plainTextFromHtml strips HTML', `got "${stripped}"`);
+  } else { fail('speech.js exports plainTextFromHtml'); }
+  // The Hebrew-voice filter keys on a he/iw/-IL language tag, so an English voice
+  // never qualifies. Confirm the source matches Hebrew tags.
+  const speechSrc = readFileSync(resolve(root, 'src/lib/speech.js'), 'utf8');
+  /he\\b|iw\\b|-IL\\b/.test(speechSrc)
+    ? pass('hebrewVoices filters on a Hebrew language tag') : fail('hebrewVoices filters on a Hebrew language tag');
+
+  const compSrc = readFileSync(resolve(root, 'src/components/ReadAloud.jsx'), 'utf8');
+  // No autoplay: speech begins only from the user's start(), reached by the play
+  // button, never from an effect.
+  /function start\(\)[\s\S]*speechSynthesis\.speak/.test(compSrc)
+    ? pass('speech starts only from the user start()') : fail('speech starts only from the user start()');
+  /useEffect\([^)]*\.speak\(/.test(compSrc)
+    ? fail('the control must not speak from an effect') : pass('the control does not speak from an effect');
+  // The Hebrew-voice check and the graceful fallback both exist.
+  /hasHebrewVoice/.test(compSrc) && /hebrewVoices\(\)/.test(compSrc)
+    ? pass('the control checks for a Hebrew voice') : fail('the control checks for a Hebrew voice');
+  /does not offer a Hebrew voice/.test(compSrc)
+    ? pass('the control degrades gracefully with no Hebrew voice') : fail('the control degrades gracefully');
+  /mangle/.test(compSrc)
+    ? pass('the control refuses to read Hebrew with an English voice') : fail('the control refuses an English voice');
+  // It listens for voiceschanged so a late-arriving voice list is picked up.
+  /voiceschanged/.test(compSrc)
+    ? pass('the control refreshes on voiceschanged') : fail('the control refreshes on voiceschanged');
+  // Cleanup: an unmount effect cancels speech.
+  /return\s*\(\)\s*=>\s*{[\s\S]*cancelSpeech\(\)/.test(compSrc)
+    ? pass('the control cancels speech on unmount') : fail('the control cancels speech on unmount');
+  // The reset effect is keyed on the joined text, a stable input, not on the
+  // speaking flag it clears.
+  /\},\s*\[joined\]\)/.test(compSrc)
+    ? pass('the reset effect is keyed on the text, not its own speaking flag')
+    : fail('the reset effect is keyed on the text, not its own speaking flag');
+  // Play, pause/resume, and stop are all present.
+  /function pauseOrResume\(/.test(compSrc) && /function stop\(/.test(compSrc)
+    ? pass('the control has play, pause, and stop') : fail('the control has play, pause, and stop');
+
+  // The reading view wires the control in, fed the daf's Hebrew segments.
+  const todaySrc = readFileSync(resolve(root, 'src/pages/Today.jsx'), 'utf8');
+  todaySrc.includes('ReadAloud') ? pass('the daf view renders the read-aloud control') : fail('the daf view renders the read-aloud control');
+  /text\.a\.he/.test(todaySrc) && /text\.b\.he/.test(todaySrc)
+    ? pass('the control is fed both amudim of Hebrew') : fail('the control is fed both amudim of Hebrew');
+} catch (err) {
+  fail('read-aloud control', err.message);
+}
+
+// ---------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------
 console.log(`\n${passes + failures} checks: ${passes} passed, ${failures} failed`);
