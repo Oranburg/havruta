@@ -16,11 +16,12 @@ These features are deployed at https://oranburg.law/havruta/.
 - The synthesis partner: when you have taken up lines, the closing whole-page partner reads a digest of the day's line work and helps you assemble the sugya, say it back, reconcile the tensions across your own readings, map the structure, and write three sentences to keep (issue #8)
 - Multi-provider choice: Claude, GPT, Gemini, OpenRouter, or a custom endpoint; a free Gemini path requires no paid account; the app defaults to the best free option when no key is set
 - Word-over-word transliteration as a pronunciation aid, the romanization sitting under each Hebrew word, following the Shofar magazine consonant chart documented in `docs/TRANSLITERATION-SCHEME.md`; on or off, off by default
-- Engage with the Hebrew: tap a word for the Sefaria lexicon, compare translations side by side, open the passage on Sefaria.org directly, gradient progress bar through the daf
+- Engage with the Hebrew: tap a word for the Sefaria lexicon, the Compare-translations panel lists the other English versions Sefaria carries for a line (the earlier perpetual-spinner bug is fixed, issue #11), open the passage on Sefaria.org directly, gradient progress bar through the daf
+- Read aloud on the daf: a play control reads the on-screen Hebrew and Aramaic with the browser's speech synthesis (the Web Speech API), on a Hebrew voice when the browser exposes one; it never speaks until the reader presses play, and with no Hebrew voice it says so rather than reading Hebrew with an English voice. Reading quality depends on the browser's available Hebrew voice.
 - Commentaries (Rashi, Tosafot, and more) and connections (cited verses, halakhic codes, parallel passages), all verbatim from Sefaria
 - Saved study record and Archive page to reopen past sessions; download any exchange as Markdown ("Download this chat" in the partner panels, "Download Markdown" in the Archive)
 - Whole-Shas progress map with a streak counter
-- Install to home screen and offline reading for previously studied pages (PWA)
+- Install to home screen and offline reading for previously studied pages (PWA), with a self-healing service worker (autoUpdate, cleanup of outdated caches, a one-time reload on controller change, and recovery from a failed chunk load rather than a black page)
 - Hamburger navigation menu
 - Pages: Today (`/`), Start here (`/start`), How the daf is learned (`/learn`), Key terms (`/terms`), The cycle and the Siyum (`/journey`), Why this exists (`/why`), Find your way in (`/find`), Your record (`/archive`), Settings (`/settings`)
 - Smoke test and CI: build, smoke, and deploy run on every push to main
@@ -34,6 +35,7 @@ These features are deployed at https://oranburg.law/havruta/.
 - Hardened never-invent and anti-caving in the partner; tighter chat spacing; download a chat as Markdown (v0.7.0)
 - The synthesis partner: the closing havruta reads the day's line work and helps assemble the sugya (v0.8.0)
 - Mermaid rendering fixed and all ten content-page diagrams redesigned to carry the argument (v0.8.1)
+- Read aloud on the daf with the browser's speech synthesis; service-worker self-heal against a stale precache; Compare-translations perpetual-spinner bug fixed (issue #11); the build shell migrated from Vite to Astro with the React app as a client-only island and MDX preserved (v0.8.1)
 
 ## Deferred (tracked as issues)
 
