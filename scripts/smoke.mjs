@@ -471,6 +471,53 @@ try {
 }
 
 // ---------------------------------------------------------------------------
+// 12. Service-worker hardening. A returning visitor was served a stale precache
+// from the old worker, including hashed chunks the new deploy had replaced,
+// which blanked the page until a hard reload or incognito. Check that autoUpdate
+// plus the workbox purge flags are set, the self-heal registration is wired into
+// main, and the chunk-load handler is guarded by a session flag so neither
+// reload path can loop.
+// ---------------------------------------------------------------------------
+console.log('\n--- 12. Service-worker self-heal ---');
+
+try {
+  const cfg = readFileSync(resolve(root, 'vite.config.js'), 'utf8');
+  if (/registerType:\s*'autoUpdate'/.test(cfg)) pass('vite-plugin-pwa uses registerType autoUpdate');
+  else fail('vite-plugin-pwa uses registerType autoUpdate');
+  if (/cleanupOutdatedCaches:\s*true/.test(cfg)) pass('workbox cleanupOutdatedCaches is set');
+  else fail('workbox cleanupOutdatedCaches is set');
+  if (/clientsClaim:\s*true/.test(cfg)) pass('workbox clientsClaim is set');
+  else fail('workbox clientsClaim is set');
+  if (/skipWaiting:\s*true/.test(cfg)) pass('workbox skipWaiting is set');
+  else fail('workbox skipWaiting is set');
+  if (/navigateFallback:/.test(cfg)) pass('workbox has a SPA navigation fallback');
+  else fail('workbox has a SPA navigation fallback');
+  // The Mermaid/KaTeX globIgnores that keep the precache small must be kept.
+  if (/'\*\*\/mermaid\*'/.test(cfg)) pass('the diagram-chunk globIgnores are kept');
+  else fail('the diagram-chunk globIgnores are kept');
+
+  const main = readFileSync(resolve(root, 'src/main.jsx'), 'utf8');
+  if (main.includes('sw-register') && /initServiceWorker\(\)/.test(main)) pass('main.jsx wires the self-heal registration');
+  else fail('main.jsx wires the self-heal registration');
+
+  const reg = readFileSync(resolve(root, 'src/sw-register.js'), 'utf8');
+  if (reg.includes("from 'virtual:pwa-register'")) pass('registration uses the virtual:pwa-register module');
+  else fail('registration uses the virtual:pwa-register module');
+  if (/controllerchange/.test(reg)) pass('a controllerchange reload is wired');
+  else fail('a controllerchange reload is wired');
+  if (/sessionStorage/.test(reg) && /CONTROLLER_RELOAD_FLAG|controller-reloaded/.test(reg)) pass('the controller-change reload is guarded by a session flag');
+  else fail('the controller-change reload is guarded by a session flag');
+  if (/Failed to fetch dynamically imported module|ChunkLoadError/.test(reg)) pass('the chunk-load error handler exists');
+  else fail('the chunk-load error handler exists');
+  if (/CHUNK_HEAL_FLAG|chunk-heal-attempted/.test(reg)) pass('the chunk-load self-heal is guarded by a session flag');
+  else fail('the chunk-load self-heal is guarded by a session flag');
+  if (/caches\.keys\(\)/.test(reg) && /unregister\(\)/.test(reg)) pass('the self-heal clears caches and unregisters workers');
+  else fail('the self-heal clears caches and unregisters workers');
+} catch (err) {
+  fail('service-worker self-heal', err.message);
+}
+
+// ---------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------
 console.log(`\n${passes + failures} checks: ${passes} passed, ${failures} failed`);

@@ -32,6 +32,16 @@ export default defineConfig({
         ]
       },
       workbox: {
+        // A new service worker takes control as soon as it installs and purges
+        // any precache left by an older build, so a returning visitor never gets
+        // a stale app or a precache pointing at hashed chunks that no longer exist
+        // (the black-page-until-hard-reload failure).
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
+        // HashRouter keeps all routes on index.html, so an unknown navigation
+        // falls back to the app shell rather than a precache miss.
+        navigateFallback: '/havruta/index.html',
         // The default glob pattern includes every asset in dist/. Tighten it so
         // large Mermaid JS chunks and image files are excluded from the precache:
         // they land in runtimeCaching below and are cached on first use instead.
