@@ -23,11 +23,17 @@ export default function TranslationCompare({ segmentRef, defaultEn, enSize }) {
   const [status, setStatus] = useState('idle'); // idle | loading | done | error
   const [error, setError] = useState(null);
   const [rows, setRows] = useState([]); // [{ versionTitle, text }]
+  // Bumped to force a fresh load when the reader asks to retry after a failure.
+  const [attempt, setAttempt] = useState(0);
 
-  // Load the versions and their texts the first time the reader opens the panel,
-  // then keep them. The data layer caches per ref, so reopening costs nothing.
+  // Load the versions and their texts whenever the panel is open. Keying the
+  // effect on the panel being open (rather than on the status it sets) keeps it
+  // safe under React's mount/cleanup/mount in development: a stale run cancels
+  // itself with `live`, and the surviving run always carries the request to a
+  // resolved state, so the panel never strands on the loading line. The data
+  // layer caches per ref and per version, so a reopen costs no new request.
   useEffect(() => {
-    if (!open || status !== 'idle') return undefined;
+    if (!open) return undefined;
     let live = true;
     setStatus('loading');
     setError(null);
@@ -66,7 +72,7 @@ export default function TranslationCompare({ segmentRef, defaultEn, enSize }) {
     return () => {
       live = false;
     };
-  }, [open, status, segmentRef]);
+  }, [open, segmentRef, attempt]);
 
   // The versions that actually carry text for this segment. A version listed for
   // the work but empty on this segment is dropped rather than shown as a blank.
@@ -93,10 +99,19 @@ export default function TranslationCompare({ segmentRef, defaultEn, enSize }) {
           )}
 
           {status === 'error' && (
-            <p style={mutedLine}>
-              The other versions could not be loaded from Sefaria right now, so
-              there is nothing to compare. {error}
-            </p>
+            <div>
+              <p style={mutedLine}>
+                The other versions could not be loaded from Sefaria right now, so
+                there is nothing to compare. {error}
+              </p>
+              <button
+                type="button"
+                onClick={() => setAttempt((n) => n + 1)}
+                style={retryStyle}
+              >
+                Try again
+              </button>
+            </div>
           )}
 
           {onlyOne && (
@@ -213,6 +228,18 @@ const defaultTag = {
 const mutedLine = {
   color: 'var(--muted)',
   margin: 0,
+};
+
+const retryStyle = {
+  marginTop: 'var(--space-sm)',
+  padding: '0.25rem 0.75rem',
+  background: 'transparent',
+  border: '1px solid var(--accent)',
+  borderRadius: 'var(--radius-pill)',
+  color: 'var(--accent)',
+  fontFamily: 'var(--font-body)',
+  fontSize: '0.85rem',
+  cursor: 'pointer',
 };
 
 const sefariaLink = {

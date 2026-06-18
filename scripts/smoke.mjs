@@ -419,6 +419,58 @@ for (const f of mdxPages) {
 if (mermaidIssues === 0) pass('no ASCII-quote gershayim traps in any chart');
 
 // ---------------------------------------------------------------------------
+// 11. Compare translations wiring. The panel stranded on its loading line in
+// development because the load effect was gated on the status it set, so React's
+// mount/cleanup/mount left the surviving run blocked and the resolving run
+// cancelled. Guard the fix statically: the data layer exports the two functions,
+// the component imports them, the load effect keys on the panel being open
+// rather than on status, and a failed load offers the reader a retry.
+// ---------------------------------------------------------------------------
+console.log('\n--- 11. Compare translations wiring ---');
+
+try {
+  const sefariaSrc = readFileSync(resolve(root, 'src/lib/sefaria.js'), 'utf8');
+  if (/export async function getTranslations\(/.test(sefariaSrc)) {
+    pass('getTranslations exported');
+  } else {
+    fail('getTranslations exported', 'not found in src/lib/sefaria.js');
+  }
+  if (/export async function getTranslationText\(/.test(sefariaSrc)) {
+    pass('getTranslationText exported');
+  } else {
+    fail('getTranslationText exported', 'not found in src/lib/sefaria.js');
+  }
+
+  const compareSrc = readFileSync(
+    resolve(root, 'src/components/TranslationCompare.jsx'),
+    'utf8'
+  );
+  if (/getTranslations/.test(compareSrc) && /getTranslationText/.test(compareSrc)) {
+    pass('TranslationCompare uses the data layer');
+  } else {
+    fail('TranslationCompare uses the data layer', 'missing import or call');
+  }
+  // The load effect must not depend on status, or the StrictMode double-run
+  // strands the panel on the loading line again.
+  const depsMatch = compareSrc.match(/\}, \[([^\]]*)\]\);/);
+  if (depsMatch && /open/.test(depsMatch[1]) && !/status/.test(depsMatch[1])) {
+    pass('load effect keys on open, not status');
+  } else {
+    fail(
+      'load effect keys on open, not status',
+      'the perpetual-spinner regression is back'
+    );
+  }
+  if (/Try again/.test(compareSrc) && /setAttempt/.test(compareSrc)) {
+    pass('failed load offers a retry');
+  } else {
+    fail('failed load offers a retry', 'no retry control on the error state');
+  }
+} catch (err) {
+  fail('compare translations wiring', err.message);
+}
+
+// ---------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------
 console.log(`\n${passes + failures} checks: ${passes} passed, ${failures} failed`);
