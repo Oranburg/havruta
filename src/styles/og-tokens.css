@@ -1,0 +1,153 @@
+/* % voice-check: skip (CSS custom-property names require -- syntax) */
+:root, [data-theme="dark"] {
+  /* Brand palette (constant across modes) */
+  --og-blue-deep: #0A3255; --og-blue-bright: #2459A9; --og-blue-light: #6DACDE;
+  --og-red-deep: #B21F2C; --og-red-bright: #E82F35; --og-red-light: #E96955;
+  --og-yellow: #FFD65C; --og-teal: #B5E1E1;
+  /* Functional, dark mode (pure black for OLED) */
+  --og-bg: #000000; --og-bg-panel: #0A3255; --og-bg-soft: #12466F;
+  --og-ink: #FFFFFF; --og-ink-muted: #B6BEC9; --og-rule: #1E5080;
+  --og-link: #6DACDE; --og-link-onpanel: #9CC9E8; --og-accent: #B5E1E1;
+  --og-accent-red: #E96955; /* AA on black; reserve --og-red-deep for >=24px/bold + fills */
+  /* Heading text colors, dark */
+  --og-heading-1: #6DACDE; --og-heading-2: #FFFFFF; --og-heading-3: #9CC9E8;
+  /* Typography */
+  --og-font-headline: 'Oswald', sans-serif;
+  --og-font-body: 'Roboto', 'Helvetica Neue', 'Arial', sans-serif;
+  --og-font-accent: 'Crimson Text', 'Georgia', serif;
+  --og-font-mono: 'Roboto Mono', 'Consolas', 'Courier New', monospace;
+  --og-font-hebrew: 'Frank Ruhl Libre', 'Noto Serif Hebrew', serif;
+  --og-size-body: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+  --og-size-small: clamp(0.85rem, 0.82rem + 0.15vw, 0.95rem);
+  --og-size-h3: clamp(1.3rem, 1.15rem + 0.7vw, 1.6rem);
+  --og-size-h2: clamp(1.6rem, 1.35rem + 1.1vw, 2rem);
+  --og-size-h1: clamp(2rem, 1.6rem + 1.8vw, 2.75rem);
+  --og-line-body: 1.7; --og-line-heading: 1.15;
+  /* Layout + spacing */
+  --og-max-width: 1100px; --og-radius-sm: 4px; --og-radius-md: 8px; --og-radius-pill: 999px;
+  --og-space-xs: 0.25rem; --og-space-sm: 0.5rem; --og-space-md: 1rem;
+  --og-space-lg: 1.5rem; --og-space-xl: 2rem; --og-space-2xl: 3rem; --og-space-3xl: 4rem;
+}
+[data-theme="light"] {
+  --og-bg: #FFFFFF; --og-bg-panel: #F8F9FA; --og-bg-soft: #E9ECEF;
+  --og-ink: #1A1A1A; --og-ink-muted: #555555; --og-rule: #D0D8E4;
+  --og-link: #2459A9; --og-link-onpanel: #2459A9;
+  --og-accent: #176D6D; /* non-brand a11y substitution, pending approval */
+  --og-accent-red: #B21F2C;
+  --og-heading-1: #0A3255; --og-heading-2: #0A3255; --og-heading-3: #2459A9;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important; scroll-behavior: auto !important;
+  }
+}
+/* COMPATIBILITY SHIM: keep one release during the og- migration, then delete.
+   Aliases retired short names to the canonical --og- values. */
+:root, [data-theme="dark"], [data-theme="light"] {
+  --bg: var(--og-bg); --bg-secondary: var(--og-bg-panel); --bg-soft: var(--og-bg-soft);
+  --text: var(--og-ink); --muted: var(--og-ink-muted); --border: var(--og-rule);
+  --accent: var(--og-link); --accent-2: var(--og-accent); --accent-red: var(--og-accent-red);
+  --blue-deep: var(--og-blue-deep); --blue-bright: var(--og-blue-bright); --blue-light: var(--og-blue-light);
+  --red-deep: var(--og-red-deep); --red-bright: var(--og-red-bright); --red-light: var(--og-red-light);
+  --yellow: var(--og-yellow); --teal: var(--og-teal);
+  --font-headline: var(--og-font-headline); --font-body: var(--og-font-body);
+  --font-accent: var(--og-font-accent); --font-mono: var(--og-font-mono); --font-hebrew: var(--og-font-hebrew);
+  --max-width: var(--og-max-width); --radius-sm: var(--og-radius-sm);
+  --radius-md: var(--og-radius-md); --radius-pill: var(--og-radius-pill);
+  --space-xs: var(--og-space-xs); --space-sm: var(--og-space-sm); --space-md: var(--og-space-md);
+  --space-lg: var(--og-space-lg); --space-xl: var(--og-space-xl);
+  --space-2xl: var(--og-space-2xl); --space-3xl: var(--og-space-3xl);
+}
+
+/* ==========================================================================
+   Shared component styles: breadcrumb + footer
+   These rules are identical for every stack. The HTML partial, the Astro
+   component, and the React component all emit the same class names and the
+   same structure, so this one sheet styles all three.
+   ========================================================================== */
+
+/* ---- Breadcrumb (WCAG 2.4.7 / 2.4.11) ---------------------------------- */
+.og-breadcrumb {
+  font-size: var(--og-size-small);
+  line-height: var(--og-line-body);
+  color: var(--og-ink-muted);
+  background: var(--og-bg-soft);
+  padding: var(--og-space-sm) var(--og-space-md);
+  border-radius: var(--og-radius-md);
+}
+.og-breadcrumb ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--og-space-xs);
+}
+.og-breadcrumb li {
+  display: inline-flex;
+  align-items: center;
+}
+/* CSS-generated separator, never an in-DOM glyph. */
+.og-breadcrumb li + li::before {
+  content: "/";
+  margin: 0 var(--og-space-xs);
+  color: var(--og-ink-muted);
+}
+.og-breadcrumb a {
+  color: var(--og-link-onpanel);
+  text-decoration: none;
+}
+.og-breadcrumb a:hover {
+  text-decoration: underline;
+}
+.og-breadcrumb [aria-current="page"] {
+  color: var(--og-ink);
+  font-weight: 600;
+}
+.og-breadcrumb a:focus-visible {
+  outline: 2px solid var(--og-link-onpanel);
+  outline-offset: 2px;
+  border-radius: var(--og-radius-sm);
+}
+
+/* ---- Footer (one contentinfo per page) --------------------------------- */
+.og-footer {
+  background: var(--og-bg-panel);
+  color: var(--og-ink);
+  border-top: 1px solid var(--og-rule);
+  padding: var(--og-space-2xl) var(--og-space-md);
+}
+.og-footer-inner {
+  max-width: var(--og-max-width);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-lg);
+}
+.og-footer nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--og-space-md);
+}
+.og-footer a {
+  color: var(--og-link-onpanel);
+  text-decoration: none;
+}
+.og-footer a:hover {
+  text-decoration: underline;
+}
+.og-footer a:focus-visible {
+  outline: 2px solid var(--og-link-onpanel);
+  outline-offset: 2px;
+  border-radius: var(--og-radius-sm);
+}
+.og-footer-copyright {
+  font-size: var(--og-size-small);
+  color: var(--og-ink-muted);
+  margin: 0;
+}
