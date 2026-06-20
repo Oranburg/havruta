@@ -253,16 +253,6 @@
   color: var(--accent);
 }
 
-.app-footer {
-  width: 100%;
-  max-width: var(--max-width);
-  margin: 0 auto;
-  padding: var(--space-lg) var(--space-md);
-  color: var(--muted);
-  font-size: 0.85rem;
-  text-align: center;
-}
-
 /* A calm card surface for panels. */
 .card {
   background: var(--bg-secondary);
