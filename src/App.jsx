@@ -110,16 +110,6 @@ function BottomNav() {
   );
 }
 
-function Footer() {
-  return (
-    <footer className="app-footer">
-      Havruta by Seth Oranburg, after the Silicon Havruta in <em>Judgment Proof</em>.{' '}
-      <a href="https://oranburg.law" target="_blank" rel="noreferrer">
-        oranburg.law
-      </a>
-    </footer>
-  );
-}
 
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -159,7 +149,7 @@ export default function App() {
             <Route path="/journey" element={<Journey />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
-          <Footer />
+
         </main>
         <InstallPrompt />
         <BottomNav />
