@@ -87,3 +87,6 @@ The text and the page images come from Sefaria through its open API. The English
 ## Scope
 
 The whole Shas. The daf yomi cycle runs about seven and a half years and covers the entire Babylonian Talmud, one folio a day. The app always asks Sefaria what today's daf is rather than computing it, so the schedule is correct without any cycle math to maintain.
+
+## Design system
+This site uses the shared Oranburg design system: the canonical `--og-` tokens, a shared breadcrumb, and a shared footer, maintained at [oranburg.github.io/design-system](https://github.com/Oranburg/oranburg.github.io/tree/main/design-system). Adopted 2026-06-20.
