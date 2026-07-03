@@ -5,10 +5,14 @@ node_modules/
 
 # Build output
 dist/
+dist-cf/
 build/
 .vercel/
 .next/
 out/
+
+# Wrangler local state
+.wrangler/
 
 # Astro generated types and cache
 .astro/

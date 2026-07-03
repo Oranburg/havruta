@@ -8,7 +8,9 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "build:cf": "astro build && node scripts/postbuild-cf.mjs",
+    "deploy:cf": "npm run build:cf && wrangler deploy"
   },
   "dependencies": {
     "@mdx-js/react": "^3.1.0",
@@ -27,6 +29,7 @@
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.14",
     "tailwindcss-animate": "^1.0.7",
-    "vite-plugin-pwa": "^0.21.1"
+    "vite-plugin-pwa": "^0.21.1",
+    "wrangler": "^4.107.0"
   }
 }
