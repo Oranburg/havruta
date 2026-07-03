@@ -1,0 +1,16 @@
+---
+// What the daf yomi journey is: one page a day, seven and a half years, six
+// orders, a Siyum HaShas, and then again. The reader-facing prose lives in
+// journey-content.mdx (see Journey.jsx); this page supplies the route's
+// title, description, and breadcrumb, and mounts Journey.jsx as a client:load
+// island.
+import Layout from '../layouts/Layout.astro';
+import Journey from './Journey.jsx';
+---
+<Layout
+  title="The journey · Havruta"
+  description="One page a day, seven and a half years, six orders, a Siyum HaShas, and then again: the shape of the daf yomi cycle."
+  current="The journey"
+>
+  <Journey client:load />
+</Layout>

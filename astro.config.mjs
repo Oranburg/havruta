@@ -3,10 +3,28 @@ import react from '@astrojs/react';
 import VitePWA from '@vite-pwa/astro';
 import mdx from '@mdx-js/rollup';
 
-// Deployed on GitHub Pages under the /havruta/ subpath. The whole React app
-// mounts as a single client-only island, so Astro is only the build shell and
-// the HTML host. The app keeps its HashRouter, so deep links resolve
-// client-side and no SPA 404 rewrite is needed.
+// Deployed on GitHub Pages under the /havruta/ subpath. Havruta is a true
+// multi-page Astro site: every route (/, /learn, /why, /find, /start, /terms,
+// /journey, /shas, /today is the same as /, /settings, /archive) is its own
+// .astro page under src/pages/, sharing src/layouts/Layout.astro, and Astro
+// server-renders each page's real, route-specific content (title,
+// description, and static copy) at build time. The old single-page
+// HashRouter build (one index.html, one client-only React app, every route a
+// client-side view inside it) is gone; navigation between routes is now
+// ordinary full-page browser navigation between separately built HTML files.
+//
+// Interactive, stateful screens (Today, Shas, Settings, Archive, and the
+// static MDX-content pages) mount as React islands with client:load, never
+// client:only, so Astro's React integration still server-renders their real
+// markup; client:load only adds hydration on top of markup that already
+// exists in the page.
+//
+// BYOK privacy is unaffected by this restructuring: nothing here introduces a
+// server route, a proxy, or server-side logging of anything. The user's AI
+// provider API key and all study/conversation content still live only in the
+// browser's localStorage and are exchanged only directly between the browser
+// and the provider (see src/lib/providers.js, src/lib/anthropic.js,
+// src/lib/partner.js), none of which this conversion touches.
 //
 // The /learn, /why, /find, /start, /terms, and /journey pages are authored in
 // MDX and imported into .jsx wrappers as React components that take a
@@ -15,8 +33,10 @@ import mdx from '@mdx-js/rollup';
 // Astro MDX integration is deliberately not used: it would render .mdx as Astro
 // components and break the React `components`-prop pattern these pages rely on.
 //
-// Astro emits the static site to dist/, which the GitHub Pages workflow uploads
-// unchanged.
+// Astro emits the static, multi-page site to dist/ (one HTML file per route),
+// which the GitHub Pages workflow uploads unchanged, and which
+// scripts/postbuild-cf.mjs repackages unchanged (a recursive copy) for the
+// Cloudflare Workers preview target.
 export default defineConfig({
   base: '/havruta/',
   output: 'static',
@@ -54,8 +74,12 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
-        // HashRouter keeps all routes on index.html, so an unknown navigation
-        // falls back to the app shell rather than a precache miss.
+        // Every route is precached as its own real HTML file by the
+        // '**/*.{html,css}' globPattern below (learn/index.html, shas/index.html,
+        // and so on), so an offline visit to an already-visited route is served
+        // its own page, not a generic shell. This fallback only covers a route
+        // that was never precached (offline-first visit to an unfetched page),
+        // where the home shell is the best available offline response.
         navigateFallback: '/havruta/index.html',
         // The default glob pattern includes every asset in dist/. Tighten it so
         // large Mermaid JS chunks and image files are excluded from the precache:

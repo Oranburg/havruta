@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { NavLink } from 'react-router-dom';
 import {
   X,
   BookOpen,
@@ -31,11 +30,25 @@ const DRAWER_ITEMS = [
   { to: '/journey', label: 'The journey', Icon: Map, end: false },
 ];
 
+// True when `to` names the current route. `end: true` entries (just "/") only
+// match the exact root; every other entry matches the root plus anything that
+// starts with it, so a page and its own querystring both count.
+//
+// This used to be react-router's NavLink `isActive`. Astro pages are real,
+// separately built HTML documents, not client-routed views inside one SPA
+// shell, so there is no router context here to ask; the current path is passed
+// in as a plain prop instead (Astro.url.pathname on the server, read once).
+function isCurrent(to, end, currentPath) {
+  if (!currentPath) return false;
+  if (end) return currentPath === to;
+  return currentPath === to || currentPath.startsWith(`${to}/`);
+}
+
 // A slide-in navigation drawer opened from the header hamburger. It traps the
 // reader's attention as a modal: focus moves into it on open, Escape closes it,
 // a tap outside closes it, and selecting a link closes it. On close, focus
 // returns to the button that opened it.
-export default function NavDrawer({ open, onClose, returnFocusRef }) {
+export default function NavDrawer({ open, onClose, returnFocusRef, currentPath }) {
   const panelRef = useRef(null);
   const firstLinkRef = useRef(null);
 
@@ -117,19 +130,21 @@ export default function NavDrawer({ open, onClose, returnFocusRef }) {
 
         <div className="nav-drawer__list">
           {DRAWER_ITEMS.map(({ to, label, Icon, end }, index) => (
-            <NavLink
+            <a
               key={to}
-              to={to}
-              end={end}
+              href={to}
               ref={index === 0 ? firstLinkRef : undefined}
-              className={({ isActive }) =>
-                isActive ? 'nav-drawer__item is-active' : 'nav-drawer__item'
+              className={
+                isCurrent(to, end, currentPath)
+                  ? 'nav-drawer__item is-active'
+                  : 'nav-drawer__item'
               }
+              aria-current={isCurrent(to, end, currentPath) ? 'page' : undefined}
               onClick={onClose}
             >
               <Icon size={22} aria-hidden="true" />
               <span>{label}</span>
-            </NavLink>
+            </a>
           ))}
         </div>
       </nav>

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation } from 'react-router-dom';
 import { ChevronLeft, Trash2, Search, Download } from 'lucide-react';
 import { listSessions, deleteSession } from '../lib/sessions.js';
 import {
@@ -41,21 +40,32 @@ function formatDate(ms) {
 }
 
 export default function Archive() {
-  // Snapshot the list once on render; deletes refresh it through state.
-  const [sessions, setSessions] = useState(() => listSessions());
+  // Two-pass hydration: listSessions() reads localStorage, which the server
+  // does not have. It is guarded by try/catch internally (src/lib/sessions.js)
+  // so it never throws during SSR, but starting from it in a useState
+  // initializer would still make the server's first render (always empty)
+  // disagree with the client's first hydration render (the real saved
+  // sessions). So this starts from an empty list on both sides and restores
+  // the real sessions in the mount effect below.
+  const [sessions, setSessions] = useState([]);
   const [openId, setOpenId] = useState(null);
   const [query, setQuery] = useState('');
-  const location = useLocation();
 
-  // The Shas map deep-links a studied daf to its saved session with ?session=id.
-  // Open that session when the param names one we hold.
+  // Restore the saved sessions (client-only, post-mount), then apply the
+  // Shas map's deep link: it links a studied daf to its saved session with
+  // ?session=id. There is no react-router context here (this is a real, Astro
+  // page now, not a HashRouter route), so the query string is read straight
+  // off window.location, which exists once this effect runs.
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
+    const restored = listSessions();
+    setSessions(restored);
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
     const wanted = params.get('session');
-    if (wanted && sessions.some((s) => s.id === wanted)) {
+    if (wanted && restored.some((s) => s.id === wanted)) {
       setOpenId(wanted);
     }
-  }, [location.search, sessions]);
+  }, []);
 
   const open = openId ? sessions.find((s) => s.id === openId) : null;
 

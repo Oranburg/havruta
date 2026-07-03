@@ -1,0 +1,15 @@
+---
+// The archive of saved study sessions, read straight from the browser's local
+// session store (src/lib/sessions.js, untouched). Archive.jsx mounts as a
+// client:load island; the route's title, description, and breadcrumb are
+// server-rendered here.
+import Layout from '../layouts/Layout.astro';
+import Archive from './Archive.jsx';
+---
+<Layout
+  title="Archive · Havruta"
+  description="Your saved havruta study sessions, kept in your browser."
+  current="Archive"
+>
+  <Archive client:load />
+</Layout>

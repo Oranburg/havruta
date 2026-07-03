@@ -1,0 +1,18 @@
+---
+// Not-found page. Static and fully server-rendered: there is nothing here that
+// depends on client state, so no React island is needed at all.
+import Layout from '../layouts/Layout.astro';
+---
+<Layout
+  title="Page not found · Havruta"
+  description="That page does not exist in Havruta."
+  current="Page not found"
+>
+  <section>
+    <h1>Page not found</h1>
+    <p>That page does not exist in this app.</p>
+    <p>
+      <a href="/">Go to today&rsquo;s daf</a>
+    </p>
+  </section>
+</Layout>

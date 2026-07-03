@@ -1,0 +1,88 @@
+---
+// Shared page shell for every Havruta route.
+//
+// This replaces the old single index.astro + App.jsx pair. Previously every
+// route was the same index.html shell mounting one client-only React app
+// (HashRouter, <Routes>), so a crawler, a share-link preview, or a no-JS
+// visitor got one identical, contentless page no matter the URL. Now each
+// route is its own .astro page under src/pages/, and every one of them wraps
+// its real, route-specific server-rendered content (a title, a description, a
+// heading, static copy) in this layout.
+//
+// Only the interactive chrome (header hamburger + theme toggle, the slide-in
+// nav drawer, the install prompt, the bottom tab bar) hydrates as a React
+// island, NavShell, mounted with client:load (never client:only) so Astro
+// still renders it to real HTML at build time; client:load only adds
+// hydration on top of that markup, it does not withhold the markup the way
+// client:only does. The page's own slotted content is genuine server-rendered
+// HTML that sits inside that island's <main>, unaffected by whether or when
+// React hydrates.
+//
+// `title` and `description` are per-route and required in spirit (each page
+// passes its own); `current` is the breadcrumb's current-page label.
+import NavShell from '../components/NavShell.jsx';
+import Breadcrumb from '../components/Breadcrumb.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/og-tokens.css';
+import '../styles/tokens.css';
+import '../index.css';
+
+export interface Props {
+  title: string;
+  description: string;
+  current: string;
+}
+const { title, description, current } = Astro.props;
+
+// Deployed under /havruta/ on both GitHub Pages and the Cloudflare Workers
+// preview (see astro.config.mjs `base` and scripts/postbuild-cf.mjs). Asset
+// references built here use BASE_URL so the favicon and icons resolve on
+// either host.
+const base = import.meta.env.BASE_URL;
+const favicon = `${base}favicon.svg`;
+const appleTouchIcon = `${base}icons/apple-touch-icon.png`;
+---
+
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0A3255" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+
+    <!-- Set the saved theme before first paint so there is no flash. The
+         default here ('dark') matches NavShell's server-rendered default, so
+         the two never disagree before this script runs on the client. -->
+    <script is:inline>(function(){var t=localStorage.getItem('havruta-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+    <link rel="apple-touch-icon" href={appleTouchIcon} />
+
+    <!-- Fonts from Google Fonts: headline, body, scholarly serif, mono, and Hebrew. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&family=Roboto:wght@400;500&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Roboto+Mono:wght@400&family=Frank+Ruhl+Libre:wght@400;500;700&family=Noto+Serif+Hebrew:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <Breadcrumb
+      trail={[{ label: "Home", href: "https://oranburg.law" }]}
+      current={current}
+    />
+    <div id="root">
+      <NavShell client:load currentPath={Astro.url.pathname}>
+        <main class="app-main">
+          <slot />
+        </main>
+      </NavShell>
+    </div>
+    <Footer
+      links={[{ label: "Home", href: "https://oranburg.law" }]}
+      copyright="© 2026 Seth C. Oranburg. All rights reserved."
+    />
+  </body>
+</html>

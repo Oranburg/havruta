@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ChevronRight, ChevronDown, Check, Flame } from 'lucide-react';
 import { getTodaysDaf } from '../lib/sefaria.js';
 import { listSessions } from '../lib/sessions.js';
@@ -17,22 +16,49 @@ import {
 // and then into the dapim of that tractate. Studied dapim and today's daf are
 // marked, with a count and a streak.
 export default function Shas() {
-  const navigate = useNavigate();
+  // Astro pages are real, separately built documents now, not HashRouter
+  // routes, so there is no client router to ask for a navigate() function.
+  // A plain full-page navigation is the correct replacement: it lets the
+  // browser (and the service worker's precache) resolve the destination page
+  // exactly as a typed-in URL or a bookmark would. This keeps the same
+  // navigate(path) call shape the tree below already used, so only this one
+  // definition changes.
+  function navigate(path) {
+    if (typeof window !== 'undefined') window.location.assign(path);
+  }
 
-  const [structure, setStructure] = useState(() => readCachedStructure());
-  const [loading, setLoading] = useState(() => !readCachedStructure());
+  // Two-pass hydration: readCachedStructure() and listSessions() read
+  // localStorage, which does not exist on the server. Both are guarded by
+  // try/catch internally (see src/lib/shas.js and src/lib/sessions.js) so
+  // they never throw during SSR, but calling them straight from a useState
+  // initializer would still make the server's first render (no cache
+  // available) disagree with the client's first hydration render (the real
+  // cache available), which is exactly the mismatch the BA two-pass technique
+  // avoids. So the initial state here always starts from the same
+  // no-cache-yet defaults on both server and client, and the real cached
+  // values, if any, are restored in the mount effect below, after hydration.
+  const [structure, setStructure] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [today, setToday] = useState(null);
-
-  // The reader's saved sessions, snapshot on mount.
-  const sessions = useMemo(() => listSessions(), []);
+  const [sessions, setSessions] = useState([]);
   const studied = useMemo(() => studiedDafSet(sessions), [sessions]);
   const streak = useMemo(() => currentStreak(sessions), [sessions]);
 
-  // Build the structure from Sefaria if it is not already cached, and ask
-  // Sefaria for today's daf so the map can mark it.
+  // Restore the cached structure and the reader's saved sessions (client-only,
+  // post-mount), then build the structure from Sefaria if nothing was cached,
+  // and ask Sefaria for today's daf so the map can mark it.
   useEffect(() => {
     let alive = true;
+
+    setSessions(listSessions());
+
+    const cached = readCachedStructure();
+    if (cached && alive) {
+      setStructure(cached);
+      setLoading(false);
+    }
+
     getShasStructure()
       .then((s) => {
         if (alive) setStructure(s);

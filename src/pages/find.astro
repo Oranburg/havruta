@@ -1,0 +1,15 @@
+---
+// Where to take the next step off the page: study partners, shiurim,
+// minyanim, and the daily daf elsewhere. The reader-facing prose lives in
+// find-content.mdx (see Find.jsx); this page supplies the route's title,
+// description, and breadcrumb, and mounts Find.jsx as a client:load island.
+import Layout from '../layouts/Layout.astro';
+import Find from './Find.jsx';
+---
+<Layout
+  title="Find your way in · Havruta"
+  description="Where to take the next step off the page: study partners, shiurim, minyanim, and the daily daf beyond this app."
+  current="Find your way in"
+>
+  <Find client:load />
+</Layout>

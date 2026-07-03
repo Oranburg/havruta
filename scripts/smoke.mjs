@@ -4,7 +4,7 @@
 //   1. Every deployed image in assets/images/catalog.json exists on disk.
 //   2. transliterate() reproduces the worked examples from docs/TRANSLITERATION-SCHEME.md.
 //   3. sefariaUrl() builds the expected canonical Sefaria URL.
-//   4. src/App.jsx registers the required routes.
+//   4. Every route has its own real .astro page (multi-page Astro site).
 //
 // Exit code 0 = all pass. Non-zero = one or more failures.
 // Run: node scripts/smoke.mjs
@@ -149,30 +149,59 @@ if (sefariaUrl) {
 }
 
 // ---------------------------------------------------------------------------
-// 4. App.jsx route registration check.
+// 4. Per-route Astro page check. Havruta is now a true multi-page Astro site:
+// every route the app used to register on App.jsx's HashRouter <Routes> is
+// its own .astro page under src/pages/, wrapping a Layout with a real,
+// route-specific title and mounting its screen as a client:load (never
+// client:only) React island.
 // ---------------------------------------------------------------------------
-console.log('\n--- 4. App.jsx routes ---');
+console.log('\n--- 4. Per-route Astro pages ---');
 
-let appSource;
-try {
-  appSource = readFileSync(resolve(root, 'src/App.jsx'), 'utf8');
-  pass('src/App.jsx readable');
-} catch (err) {
-  fail('src/App.jsx readable', err.message);
-  appSource = null;
+const requiredPages = {
+  '/': 'index.astro',
+  '/learn': 'learn.astro',
+  '/why': 'why.astro',
+  '/find': 'find.astro',
+  '/start': 'start.astro',
+  '/terms': 'terms.astro',
+  '/journey': 'journey.astro',
+  '/shas': 'shas.astro',
+  '/archive': 'archive.astro',
+  '/settings': 'settings.astro',
+};
+
+for (const [route, file] of Object.entries(requiredPages)) {
+  const pagePath = resolve(root, 'src/pages', file);
+  if (!existsSync(pagePath)) {
+    fail(`route ${route} has a page`, `${file} not found`);
+    continue;
+  }
+  pass(`route ${route} has a page (${file})`);
+  const src = readFileSync(pagePath, 'utf8');
+  if (/client:only=/.test(src)) {
+    fail(`${file} does not use client:only`, 'a client:only island renders no server HTML');
+  } else {
+    pass(`${file} does not use client:only`);
+  }
+  if (/client:load/.test(src)) {
+    pass(`${file} mounts its screen with client:load`);
+  } else {
+    fail(`${file} mounts its screen with client:load`, 'no client:load island found');
+  }
+  if (/<Layout\b/.test(src) && /title=/.test(src)) {
+    pass(`${file} sets a real page title via Layout`);
+  } else {
+    fail(`${file} sets a real page title via Layout`);
+  }
 }
 
-if (appSource) {
-  const requiredRoutes = ['/', '/learn', '/why', '/find', '/shas', '/archive', '/settings'];
-  for (const route of requiredRoutes) {
-    // String check: look for path="<route>" in the source.
-    const pattern = `path="${route}"`;
-    if (appSource.includes(pattern)) {
-      pass(`route ${route} registered`);
-    } else {
-      fail(`route ${route} registered`, `pattern ${pattern} not found in App.jsx`);
-    }
-  }
+// The 404 page is fully static (no client state to restore), so it needs no
+// island at all.
+const notFoundPath = resolve(root, 'src/pages/404.astro');
+if (existsSync(notFoundPath)) {
+  pass('404.astro exists');
+} else {
+  fail('404.astro exists');
 }
 
 // ---------------------------------------------------------------------------
@@ -499,11 +528,12 @@ try {
   if (/'\*\*\/mermaid\*'/.test(cfg)) pass('the diagram-chunk globIgnores are kept');
   else fail('the diagram-chunk globIgnores are kept');
 
-  // Under the island, App.jsx runs initServiceWorker from a mount effect; the
-  // old main.jsx is gone with the Vite entry.
-  const main = readFileSync(resolve(root, 'src/App.jsx'), 'utf8');
-  if (main.includes('sw-register') && /initServiceWorker\(\)/.test(main)) pass('App.jsx wires the self-heal registration');
-  else fail('App.jsx wires the self-heal registration');
+  // Every page mounts NavShell (client:load), which runs initServiceWorker
+  // from a mount effect; App.jsx and its HashRouter shell are gone, replaced
+  // by per-route Astro pages plus this one shared chrome island.
+  const main = readFileSync(resolve(root, 'src/components/NavShell.jsx'), 'utf8');
+  if (main.includes('sw-register') && /initServiceWorker\(\)/.test(main)) pass('NavShell.jsx wires the self-heal registration');
+  else fail('NavShell.jsx wires the self-heal registration');
 
   const reg = readFileSync(resolve(root, 'src/sw-register.js'), 'utf8');
   if (reg.includes("from 'virtual:pwa-register'")) pass('registration uses the virtual:pwa-register module');
@@ -591,21 +621,25 @@ try {
 }
 
 // ---------------------------------------------------------------------------
-// Astro build shell + island. The whole React app mounts as a single
-// client-only island, the base path is /havruta/, and the emitted dist/ carries
-// the app shell, the built assets, the service worker, and the manifest under
-// the base. Astro is only the host; the React app is unchanged.
+// Astro multi-page build. Every route is its own .astro page under
+// src/pages/ (see section 4), sharing src/layouts/Layout.astro, which wraps
+// one shared React island (NavShell, client:load) around each page's own
+// server-rendered content. The base path is /havruta/, and the emitted dist/
+// carries one real HTML file per route plus the built assets, the service
+// worker, and the manifest under that base.
 // ---------------------------------------------------------------------------
-console.log('\n--- Astro build shell + island ---');
+console.log('\n--- Astro multi-page build ---');
 try {
-  const astroPage = readFileSync(resolve(root, 'src/pages/index.astro'), 'utf8');
-  astroPage.includes("import App from '../App.jsx'")
-    ? pass('index.astro imports the existing App') : fail('index.astro imports the existing App');
-  /<App\s+client:only="react"\s*\/>/.test(astroPage)
-    ? pass('index.astro mounts App as a client:only react island') : fail('index.astro mounts App as a client:only react island');
-  // The pre-paint theme script and the root div are carried over.
-  astroPage.includes('havruta-theme') ? pass('index.astro keeps the pre-paint theme script') : fail('index.astro keeps the pre-paint theme script');
-  astroPage.includes('id="root"') ? pass('index.astro keeps the root mount node') : fail('index.astro keeps the root mount node');
+  const layoutSrc = readFileSync(resolve(root, 'src/layouts/Layout.astro'), 'utf8');
+  /<NavShell\s+client:load/.test(layoutSrc)
+    ? pass('Layout.astro mounts NavShell as a client:load react island') : fail('Layout.astro mounts NavShell as a client:load react island');
+  /client:only=/.test(layoutSrc)
+    ? fail('Layout.astro must not use client:only') : pass('Layout.astro does not use client:only');
+  // The pre-paint theme script and the root div are carried over from the old
+  // single-page shell.
+  layoutSrc.includes('havruta-theme') ? pass('Layout.astro keeps the pre-paint theme script') : fail('Layout.astro keeps the pre-paint theme script');
+  layoutSrc.includes('id="root"') ? pass('Layout.astro keeps the root mount node') : fail('Layout.astro keeps the root mount node');
+  /<title>\{title\}<\/title>/.test(layoutSrc) ? pass('Layout.astro renders a per-page <title>') : fail('Layout.astro renders a per-page <title>');
 
   const cfg = readFileSync(resolve(root, 'astro.config.mjs'), 'utf8');
   /base:\s*'\/havruta\/'/.test(cfg)
@@ -617,10 +651,10 @@ try {
   /@mdx-js\/rollup/.test(cfg) && /enforce:\s*'pre'/.test(cfg)
     ? pass('astro.config.mjs keeps @mdx-js/rollup (enforce pre) for React MDX') : fail('astro.config.mjs keeps @mdx-js/rollup for React MDX');
 
-  // The emitted build, if present, serves the shell with base-correct assets and
-  // ships the service worker and manifest under the base. The check is skipped
-  // before the first build so the harness still runs offline; CI runs it after
-  // astro build, where dist/ is present.
+  // The emitted build, if present, serves each route as its own HTML file
+  // with base-correct assets, and ships the service worker and manifest under
+  // the base. The check is skipped before the first build so the harness
+  // still runs offline; CI runs it after astro build, where dist/ is present.
   const distIndex = resolve(root, 'dist/index.html');
   if (existsSync(distIndex)) {
     const html = readFileSync(distIndex, 'utf8');
@@ -630,11 +664,45 @@ try {
       ? pass('dist ships the service worker (sw.js)') : fail('dist ships the service worker (sw.js)');
     existsSync(resolve(root, 'dist/manifest.webmanifest'))
       ? pass('dist ships the PWA manifest') : fail('dist ships the PWA manifest');
+
+    // Each route built its own real HTML file with its own title, not one
+    // shell copied under every path.
+    const routeFiles = {
+      '/learn': 'dist/learn/index.html',
+      '/why': 'dist/why/index.html',
+      '/shas': 'dist/shas/index.html',
+      '/settings': 'dist/settings/index.html',
+      '/archive': 'dist/archive/index.html',
+    };
+    const titles = new Set();
+    let allDistinct = true;
+    for (const [route, file] of Object.entries(routeFiles)) {
+      const fp = resolve(root, file);
+      if (!existsSync(fp)) {
+        fail(`dist has a built page for ${route}`, `${file} not found`);
+        allDistinct = false;
+        continue;
+      }
+      pass(`dist has a built page for ${route}`);
+      const pageHtml = readFileSync(fp, 'utf8');
+      const m = pageHtml.match(/<title>([^<]*)<\/title>/);
+      const title = m ? m[1] : null;
+      if (!title) {
+        fail(`${file} has a <title>`);
+        allDistinct = false;
+      } else if (titles.has(title)) {
+        fail(`${file} has a distinct <title>`, `duplicate title "${title}"`);
+        allDistinct = false;
+      } else {
+        titles.add(title);
+      }
+    }
+    if (allDistinct) pass('every checked route built a distinct, real page (not one shell repeated)');
   } else {
     console.log('SKIP  dist/ checks (no build present; run astro build first)');
   }
 } catch (err) {
-  fail('Astro build shell + island', err.message);
+  fail('Astro multi-page build', err.message);
 }
 
 // ---------------------------------------------------------------------------

@@ -1,0 +1,16 @@
+---
+// The whole-Shas progress map: every order and tractate, which dapim have
+// been studied, and the current streak. Shas.jsx does its own data fetching
+// (Sefaria for structure, the local session store for progress), so it mounts
+// as a client:load island; the route's title, description, and breadcrumb are
+// server-rendered here.
+import Layout from '../layouts/Layout.astro';
+import Shas from './Shas.jsx';
+---
+<Layout
+  title="Shas · Havruta"
+  description="The whole map of the Talmud's six orders and tractates, with studied dapim and the current streak marked."
+  current="Shas"
+>
+  <Shas client:load />
+</Layout>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import Link from './Link.jsx';
 import { Send, Square, Lock, X, Download } from 'lucide-react';
 import {
   readProviderSettings,

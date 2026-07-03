@@ -1,0 +1,16 @@
+---
+// How the daf is learned: the beit midrash method, the chevruta pair, daf
+// yomi's daily discipline. The reader-facing prose lives in
+// learn-content.mdx (see Learn.jsx); this page only supplies the route's
+// title, description, and breadcrumb, and mounts Learn.jsx as a client:load
+// island so its static content is real server-rendered HTML.
+import Layout from '../layouts/Layout.astro';
+import Learn from './Learn.jsx';
+---
+<Layout
+  title="How the daf is learned · Havruta"
+  description="How the Talmud is studied in the beit midrash and in the daily discipline of daf yomi, and how this app follows that method."
+  current="How the daf is learned"
+>
+  <Learn client:load />
+</Layout>

@@ -1,0 +1,17 @@
+---
+// Provider and API-key settings. Every field here (provider choice, API key,
+// model, base URL, challenge level) is read from and written straight to the
+// browser's own localStorage in Settings.jsx; see docs/CONSTITUTION.md and the
+// BYOK note in astro.config.mjs. Nothing here is proxied through, logged by,
+// or stored on a server: this page is a static shell, and Settings.jsx is a
+// client:load island that talks to localStorage only.
+import Layout from '../layouts/Layout.astro';
+import Settings from './Settings.jsx';
+---
+<Layout
+  title="Settings · Havruta"
+  description="Choose your AI provider and enter your own API key. The key is stored only in your browser and is never sent to or logged by a server."
+  current="Settings"
+>
+  <Settings client:load />
+</Layout>

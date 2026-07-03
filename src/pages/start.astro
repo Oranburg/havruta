@@ -1,0 +1,14 @@
+---
+// The on-ramp for a first-time user. The reader-facing prose lives in
+// start-content.mdx (see Start.jsx); this page supplies the route's title,
+// description, and breadcrumb, and mounts Start.jsx as a client:load island.
+import Layout from '../layouts/Layout.astro';
+import Start from './Start.jsx';
+---
+<Layout
+  title="Start here · Havruta"
+  description="A first-time reader's on-ramp to daf yomi and to this study partner."
+  current="Start here"
+>
+  <Start client:load />
+</Layout>

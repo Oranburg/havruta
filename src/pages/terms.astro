@@ -1,0 +1,15 @@
+---
+// Glossary of Hebrew and Aramaic terms a newcomer meets on the daf. The
+// reader-facing prose lives in terms-content.mdx (see Terms.jsx); this page
+// supplies the route's title, description, and breadcrumb, and mounts
+// Terms.jsx as a client:load island.
+import Layout from '../layouts/Layout.astro';
+import Terms from './Terms.jsx';
+---
+<Layout
+  title="Key terms · Havruta"
+  description="A glossary of the Hebrew and Aramaic terms a newcomer meets on the daf."
+  current="Key terms"
+>
+  <Terms client:load />
+</Layout>

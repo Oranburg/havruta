@@ -1,0 +1,14 @@
+---
+// Why this app exists. The reader-facing prose lives in why-content.mdx (see
+// Why.jsx); this page supplies the route's title, description, and
+// breadcrumb, and mounts Why.jsx as a client:load island.
+import Layout from '../layouts/Layout.astro';
+import Why from './Why.jsx';
+---
+<Layout
+  title="Why Havruta exists · Havruta"
+  description="Why a daf yomi study partner that challenges a reading, rather than handing over an answer, is worth building."
+  current="Why this exists"
+>
+  <Why client:load />
+</Layout>

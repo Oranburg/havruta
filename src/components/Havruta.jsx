@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import Link from './Link.jsx';
 import { Send, Square, Lock, Download } from 'lucide-react';
 import {
   readProviderSettings,

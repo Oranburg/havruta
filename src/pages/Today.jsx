@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import Link from '../components/Link.jsx';
 import {
   ChevronLeft,
   ChevronRight,
@@ -96,7 +96,6 @@ function readSavedSize(storageKey, fallback, min, max) {
 }
 
 export default function Today() {
-  const location = useLocation();
   const [daf, setDaf] = useState(null);
   const [text, setText] = useState(null);
   const [images, setImages] = useState([]);
@@ -161,7 +160,16 @@ export default function Today() {
   // Load today's daf by default, or a specific daf when the Shas map links here
   // with ?daf=Tractate%20Number. Reload when that param changes so tapping a
   // different daf in the map reloads this page at it.
-  const dafParam = new URLSearchParams(location.search).get('daf');
+  // No react-router context to read the query string from since this is a
+  // real, separately built page now, not a HashRouter route. window.location
+  // is only read here (never at module scope), and this whole component only
+  // ever renders inside NavShell's client:load island, so window exists by
+  // the time this runs. The 'loading' branch below is the only thing the
+  // server ever emits for this page, and it does not depend on dafParam, so
+  // there is no hydration mismatch to guard against here.
+  const dafParam = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('daf')
+    : null;
   useEffect(() => {
     load(dafParam || null);
   }, [load, dafParam]);
