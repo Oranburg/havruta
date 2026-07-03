@@ -642,8 +642,12 @@ try {
   /<title>\{title\}<\/title>/.test(layoutSrc) ? pass('Layout.astro renders a per-page <title>') : fail('Layout.astro renders a per-page <title>');
 
   const cfg = readFileSync(resolve(root, 'astro.config.mjs'), 'utf8');
-  /base:\s*'\/havruta\/'/.test(cfg)
-    ? pass("astro.config.mjs sets base '/havruta/'") : fail("astro.config.mjs sets base '/havruta/'");
+  // base is now conditional on CF_SUBDOMAIN_BUILD (unset in the default
+  // GitHub Pages build, so it still resolves to '/havruta/'), so this checks
+  // the ternary carries the GitHub Pages value rather than a literal
+  // `base: '/havruta/'` assignment.
+  /isSubdomainBuild \? '\/' : '\/havruta\/'/.test(cfg)
+    ? pass("astro.config.mjs's default (non-subdomain) base is '/havruta/'") : fail("astro.config.mjs's default (non-subdomain) base is '/havruta/'");
   /output:\s*'static'/.test(cfg)
     ? pass('astro.config.mjs builds a static site') : fail('astro.config.mjs builds a static site');
   // The MDX pages keep compiling as React: @mdx-js/rollup runs in Astro's Vite,

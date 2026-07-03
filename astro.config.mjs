@@ -37,10 +37,35 @@ import mdx from '@mdx-js/rollup';
 // which the GitHub Pages workflow uploads unchanged, and which
 // scripts/postbuild-cf.mjs repackages unchanged (a recursive copy) for the
 // Cloudflare Workers preview target.
+// Two build modes share this one config. The default build (`npm run build`,
+// invoked by the existing GitHub Actions workflow at
+// .github/workflows/deploy.yml) must keep emitting the GitHub Pages shape:
+// assets under the '/havruta/' base path, written to ./dist, exactly as
+// before this change. That workflow and its output must not change behavior.
+//
+// A second, new build mode serves the same app from a Cloudflare Workers
+// Build project named "havruta" at havruta.oranburg.law, a root domain with
+// no path prefix. That target needs a root base ('/') and root-relative
+// asset paths, so it cannot reuse '/havruta/'. It also writes to a
+// distinctly named output directory (./dist-subdomain) rather than ./dist,
+// because scripts/smoke.mjs and the GitHub Pages workflow both read ./dist
+// and assert it carries the '/havruta/' prefix; if the subdomain build
+// overwrote ./dist with root-relative paths, it would silently break that
+// check and the Pages deploy.
+//
+// The CF_SUBDOMAIN_BUILD environment variable selects the subdomain mode. It
+// is set only by the new `npm run build:subdomain` script (see package.json)
+// and is never set by the default `npm run build` or by the GitHub Actions
+// workflow.
+const isSubdomainBuild = Boolean(process.env.CF_SUBDOMAIN_BUILD);
+// Shared by base, the PWA manifest, and the service worker config below so
+// every hardcoded path prefix in this file moves together.
+const base = isSubdomainBuild ? '/' : '/havruta/';
+
 export default defineConfig({
-  base: '/havruta/',
+  base,
   output: 'static',
-  outDir: './dist',
+  outDir: isSubdomainBuild ? './dist-subdomain' : './dist',
   vite: {
     plugins: [
       { enforce: 'pre', ...mdx({ jsxImportSource: 'react' }) },
@@ -58,8 +83,8 @@ export default defineConfig({
         theme_color: '#0A3255',
         background_color: '#000000',
         display: 'standalone',
-        start_url: '/havruta/',
-        scope: '/havruta/',
+        start_url: base,
+        scope: base,
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
@@ -80,7 +105,7 @@ export default defineConfig({
         // its own page, not a generic shell. This fallback only covers a route
         // that was never precached (offline-first visit to an unfetched page),
         // where the home shell is the best available offline response.
-        navigateFallback: '/havruta/index.html',
+        navigateFallback: `${base}index.html`,
         // The default glob pattern includes every asset in dist/. Tighten it so
         // large Mermaid JS chunks and image files are excluded from the precache:
         // they land in runtimeCaching below and are cached on first use instead.
@@ -131,7 +156,7 @@ export default defineConfig({
           {
             urlPattern: ({ request, url }) =>
               request.destination === 'script' &&
-              url.pathname.startsWith('/havruta/'),
+              url.pathname.startsWith(base),
             handler: 'StaleWhileRevalidate',
             options: { cacheName: 'app-scripts', expiration: { maxEntries: 80 } }
           },
@@ -139,7 +164,7 @@ export default defineConfig({
           {
             urlPattern: ({ request, url }) =>
               request.destination === 'image' &&
-              url.pathname.startsWith('/havruta/'),
+              url.pathname.startsWith(base),
             handler: 'CacheFirst',
             options: {
               cacheName: 'app-images',

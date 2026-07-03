@@ -6,6 +6,7 @@ node_modules/
 # Build output
 dist/
 dist-cf/
+dist-subdomain/
 build/
 .vercel/
 .next/

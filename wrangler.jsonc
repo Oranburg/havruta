@@ -1,11 +1,11 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "havruta-preview",
+  "name": "havruta",
   "compatibility_date": "2026-07-02",
   "observability": {
     "enabled": true
   },
   "assets": {
-    "directory": "./dist-cf"
+    "directory": "./dist-subdomain"
   }
 }
