@@ -90,3 +90,7 @@ The whole Shas. The daf yomi cycle runs about seven and a half years and covers 
 
 ## Design system
 This site uses the shared Oranburg design system: the canonical `--og-` tokens, a shared breadcrumb, and a shared footer, maintained at [oranburg.github.io/design-system](https://github.com/Oranburg/oranburg.github.io/tree/main/design-system). Adopted 2026-06-20.
+
+## Cross-System Workflow
+
+This repo is part of a larger system spanning iA Writer, LawJ, CUA and personal Google Drive, OneDrive, COLDSTORAGE, and the other repos under `~/Developer`. For where new work belongs and how these systems relate, see [LawJ's cross-system workflow doc](https://github.com/Oranburg/LawJ/blob/main/docs/CROSS-SYSTEM-WORKFLOW.md).
