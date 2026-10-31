@@ -22,7 +22,7 @@ export const PROVIDERS = [
     label: 'Claude (Anthropic)',
     protocol: 'anthropic',
     defaultBaseUrl: 'https://api.anthropic.com',
-    defaultModel: 'claude-sonnet-4-6',
+    defaultModel: 'claude-sonnet-5-5',
     keyHint: 'sk-ant-...',
     consoleUrl: 'https://console.anthropic.com/settings/keys',
     note:
@@ -55,7 +55,7 @@ export const PROVIDERS = [
     label: 'OpenRouter (many models)',
     protocol: 'openai',
     defaultBaseUrl: 'https://openrouter.ai/api/v1',
-    defaultModel: 'anthropic/claude-sonnet-4.6',
+    defaultModel: 'anthropic/claude-sonnet-5.5',
     keyHint: 'sk-or-...',
     consoleUrl: 'https://openrouter.ai/keys',
     note:

@@ -2,7 +2,7 @@
 
 A daf yomi study partner that argues with you, built in the form of the Silicon Havruta described in Seth Oranburg's *Judgment Proof*.
 
-Live at https://oranburg.law/havruta/.
+Live at https://havruta.oranburg.law/.
 
 You read the daf and write your own reading before the partner says anything. Then it challenges that reading and refuses to let a weak one pass. You keep deciding what the page means; the partner makes you earn the decision. The friction is the point.
 
